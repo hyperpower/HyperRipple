@@ -7,18 +7,13 @@ class TreePanel(QWidget):
         super().__init__(parent)
         self.model = model
 
-        self.layout = QVBoxLayout(self)
-
         self.tree_view = QTreeView()
         self.tree_view.setModel(self.model)
-        # self.tree_view.setItemDelegate(TaskDelegate())
-        # self.tree_view.setSpacing(4)
-        # self.tree_view.setUniformItemSizes(False)
-        # Controller
-        # self.controller = TaskController(self.model, self.tree_view)
 
-        self.layout.addWidget(self.tree_view)
-        self.setLayout(self.layout)
+        layout = QVBoxLayout(self)
+        layout.addWidget(self.tree_view)
+        self.setLayout(layout)
+        
 
 class TreeWindow(QWidget):
     def __init__(self, model, parent=None):

@@ -13,7 +13,7 @@ from .tree_model import *
 class MatplotModel(TreeModel):
     def __init__(self, parent=None):
         super().__init__(MatplotNode(), parent)
-        self.addFigureItem(self.index(0, 0), "Figure 1", "Figure")
+        self.addFigureItem(QModelIndex(), "Figure 1", "Figure")
 
     def addFigureItem(self, parent_index: QModelIndex, name: str, item_type: str):
         parent_item = self.getItem(parent_index)

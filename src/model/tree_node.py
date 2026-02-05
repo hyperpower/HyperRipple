@@ -18,6 +18,9 @@ class TreeNodeBase:
 
     def childCount(self):
         return len(self.children)
+    
+    def is_leaf(self):
+        return len(self.children) == 0
 
     def row(self):
         if self.parent:

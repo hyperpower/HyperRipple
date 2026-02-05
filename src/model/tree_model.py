@@ -9,7 +9,7 @@ class TreeModel(QAbstractItemModel):
 
     def rowCount(self, parent=QModelIndex()):
         item = self.getItem(parent)
-        return item.childCount() 
+        return len([child for child in item.children if not child.is_leaf()])
 
     def columnCount(self, parent=QModelIndex()):
         return 1  # 只显示名字
@@ -18,14 +18,17 @@ class TreeModel(QAbstractItemModel):
         if not index.isValid():
             return None
         item = self.getItem(index)
+        if item.is_leaf():
+            return None # leaf node is not displayed
         if role == Qt.DisplayRole:
             return f"{item.name}"
         return None
 
     def index(self, row, column, parent=QModelIndex()):
         parentItem = self.getItem(parent)
-        childItem = parentItem.child(row)
-        if childItem:
+        non_leaf_children = [child for child in parentItem.children if not child.is_leaf()]
+        if 0 <= row < len(non_leaf_children):
+            childItem = non_leaf_children[row]
             return self.createIndex(row, column, childItem)
         return QModelIndex()
 

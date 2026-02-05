@@ -4,7 +4,23 @@
         {
             "label": "Run main.py",
             "type": "shell",
-            "command": "python3 src/main.py",
+            "command": "python src/main.py",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Run treepanel.py",
+            "type": "shell",
+            "command": "/opt/homebrew/bin/python3 test/test_treepanel.py",
             "group": {
                 "kind": "build",
                 "isDefault": true
