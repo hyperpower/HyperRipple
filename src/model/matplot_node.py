@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QAbstractItemModel, QModelIndex
 from PySide6.QtGui import QIcon, QColor, QBrush, QFont
 
-from tree_node import *
+from .tree_node import *
 
 class FigureNode(TreeNodeGroup):
     def __init__(self, name="Figure"):
@@ -24,7 +24,7 @@ class MatplotNode(TreeNodeGroup):
 
         # add default children
         self.addChild(TreeNodeString("version", "3.5.1"))
-        self.addChild(TreeNodeNumber("test number", 1))
+        # self.addChild(TreeNodeNumber("test number", 1))
 
 
 

@@ -1,6 +1,6 @@
 import sys
 from PySide6.QtWidgets import (
-    QApplication, QMainWindow, QListView, QVBoxLayout, QWidget,
+    QApplication, QMainWindow, QListView, QVBoxLayout, QWidget, QTreeView,
     QPushButton, QHBoxLayout, QStyledItemDelegate, QProgressBar, QStyle
 )
 from PySide6.QtCore import Qt, QAbstractListModel, QModelIndex, QSize, Signal
@@ -20,11 +20,11 @@ class MainWindow(QMainWindow):
         self.model = TaskModel()
 
         # View - QListView
-        self.task_list = QListView()
+        self.task_list = QTreeView()
         self.task_list.setModel(self.model)
         self.task_list.setItemDelegate(TaskDelegate())
-        self.task_list.setSpacing(4)
-        self.task_list.setUniformItemSizes(False)
+        # self.task_list.setSpacing(4)
+        # self.task_list.setUniformItemSizes(False)
 
         # Controller
         self.controller = TaskController(self.model, self.task_list)
