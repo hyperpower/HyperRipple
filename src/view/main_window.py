@@ -1,65 +1,80 @@
 import sys
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QListView, QVBoxLayout, QWidget, QTreeView,
-    QPushButton, QHBoxLayout, QStyledItemDelegate, QProgressBar, QStyle
+    QPushButton, QHBoxLayout, QStyledItemDelegate, QProgressBar, QStyle,
+    QLabel, QSplitter, QTabWidget
 )
 from PySide6.QtCore import Qt, QAbstractListModel, QModelIndex, QSize, Signal
 from PySide6.QtGui import QFont, QColor, QBrush, QPainter, QTextOption
-from model.model import TaskModel
-from delegate.delegate import TaskDelegate
+from view.tree_panel import TreePanel
+from view.property_panel import PropertyPanel
+from model.matplot_canvas import MatplotCanvas
+from model.table_model import TableModel
+from controller.property_controller import PropertyController
 # from view.view import View
-from controller.controller import TaskController
+
 
 class MainWindow(QMainWindow):
-    def __init__(self):
+    def __init__(self, model=None, parent=None):
         super().__init__()
-        self.setWindowTitle("任务管理器 - MVC风格")
-        self.resize(680, 520)
+        self.canvas = MatplotCanvas(self, width=5, height=4, dpi=100)
+        self._init_window(model)
 
-        # Model
-        self.model = TaskModel()
+    def _init_window(self, model):
+        self.setWindowTitle("PyQt Matplotlib")
+        self.setGeometry(350, 350, 1600, 1000)
 
-        # View - QListView
-        self.task_list = QTreeView()
-        self.task_list.setModel(self.model)
-        self.task_list.setItemDelegate(TaskDelegate())
-        # self.task_list.setSpacing(4)
-        # self.task_list.setUniformItemSizes(False)
+        # 创建一个主控件和布局
+        main_widget = QWidget(self)
+        self.setCentralWidget(main_widget)
+        layout = QVBoxLayout(main_widget)
+        
+        # 创建一个绘图画布
+        # pm = self.manager.managers["plots"]
+        # self.canvas = pm.canvas["plot_1"]
+        # toolbar = NavigationToolbar(self.canvas, self)
+        # layout.addWidget(toolbar)
+        # horizontal layout
+        hlayout = QHBoxLayout()
+        layout.addLayout(hlayout)
 
-        # Controller
-        self.controller = TaskController(self.model, self.task_list)
+        #left layout
+        left_layout = QVBoxLayout() 
+        hlayout.addLayout(left_layout)
 
-        # UI 布局
-        central = QWidget()
-        layout = QVBoxLayout(central)
-        layout.setContentsMargins(10, 10, 10, 10)
+        # 示例按钮
+        label = QLabel("状态栏")
+        self.statusBar().addWidget(label)
 
-        layout.addWidget(self.task_list)
+        # form_btn = QPushButton("打开表单窗口")
+        # form_btn.clicked.connect(self.show_form)
+        # layout.addWidget(form_btn)
 
-        btn_layout = QHBoxLayout()
-        btn_layout.addStretch()
+        self.tree_panel = TreePanel(model)
+        node = model.getItem(QModelIndex())
+        self.property_panel = PropertyPanel(TableModel(node))
 
-        self.btn_add = QPushButton("＋ 新任务")
-        self.btn_add.clicked.connect(self.on_add_clicked)
-        btn_layout.addWidget(self.btn_add)
+        self.controller = PropertyController(self.tree_panel, self.property_panel)
+        # self.tree_panel.item_selected.connect(self.property_panel.refresh_panel)
+        # self.tree_panel.item_selected.connect(self.property_panel.refresh_panel_path)
 
-        self.btn_del = QPushButton("删除选中")
-        self.btn_del.clicked.connect(self.controller.delete_selected_task)
-        btn_layout.addWidget(self.btn_del)
+        left_splitter = QSplitter(Qt.Vertical)
+        left_splitter.addWidget(self.tree_panel)
+        left_splitter.addWidget(self.property_panel)
+        left_splitter.setSizes([300, 250])
+        left_layout.addWidget(left_splitter)
 
-        layout.addLayout(btn_layout)
+        # 创建分割器
+        splitter = QSplitter()
 
-        self.setCentralWidget(central)
+        splitter.addWidget(left_splitter)
 
-        # 初始化一些测试数据
-        for title in [
-            "写周报", "买猫粮", "健身房 1小时", "复习 PySide6 委托绘制",
-            "整理桌面", "看完《权游》前三季"
-        ]:
-            self.model.addTask(title)
+        tab_widget = QTabWidget()
+        tab_widget.addTab(self.canvas, "Plot")
+        tab_widget.addTab(QWidget(), "Table")
+        splitter.addWidget(tab_widget)
+        splitter.setSizes([250, 750])
+        hlayout.addWidget(splitter)
 
-    def on_add_clicked(self):
-        # 简单演示，实际项目中可以用 QInputDialog
-        from datetime import datetime
-        title = f"任务 {datetime.now().strftime('%H:%M:%S')}"
-        self.controller.add_new_task(title)
+        # 初始绘图
+        # pm.update_canvas("plot_1")

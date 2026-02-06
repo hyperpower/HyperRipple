@@ -4,33 +4,19 @@
         {
             "label": "Run main.py",
             "type": "shell",
-            "command": "python src/main.py",
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            },
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared"
-            },
+            "command": "${command:python.interpreterPath}",
+            "args": ["${workspaceFolder}/src/main.py"],
+            "group": {"kind": "build", "isDefault": true},
+            "presentation": {"reveal": "always"},
             "problemMatcher": []
         },
         {
             "label": "Run treepanel.py",
             "type": "shell",
-            "command": "/opt/homebrew/bin/python3 test/test_treepanel.py",
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            },
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared"
-            },
+            "command": "${command:python.interpreterPath}",
+            "args": ["${workspaceFolder}/test/test_treepanel.py"],
+            "group": {"kind": "build", "isDefault": false},
+            "presentation": {"reveal": "always"},
             "problemMatcher": []
         }
     ]

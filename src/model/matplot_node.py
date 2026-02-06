@@ -1,10 +1,4 @@
 import sys
-from PySide6.QtWidgets import (
-    QApplication, QMainWindow, QTreeView, QVBoxLayout, QWidget,
-    QPushButton, QHBoxLayout
-)
-from PySide6.QtCore import Qt, QAbstractItemModel, QModelIndex
-from PySide6.QtGui import QIcon, QColor, QBrush, QFont
 
 import matplotlib
 
@@ -33,6 +27,12 @@ class MatplotNode(TreeNodeGroup):
         self.addChild(TreeNodeString("version", version))
         # self.addChild(TreeNodeNumber("test number", 1))
     
+class MatplotRootNode(TreeNodeGroup):
+    def __init__(self, name="Matplot Root"):
+        super().__init__(name)
+
+        # add default children
+        self.addChild(MatplotNode("Matplot"))
         
 
 

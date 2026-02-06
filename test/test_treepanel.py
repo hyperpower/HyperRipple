@@ -10,10 +10,12 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../s
 # ...existing code...delegate.delegate import TaskDelegate
 # from view.view import View
 
+from controller.property_controller import PropertyController
 from view.tree_panel import TreePanel
 from view.property_panel import PropertyPanel 
 from model.matplot_model import MatplotModel
-from model.list_model import ListModel
+from model.table_model import TableModel
+from view.main_window import MainWindow
 
 class TreePropertyWindow(QMainWindow):
     def __init__(self, model, parent=None):
@@ -25,11 +27,14 @@ class TreePropertyWindow(QMainWindow):
         self.layout = QVBoxLayout(central_widget)
 
         self.tree_panel = TreePanel(model)
-        self.property_panel = PropertyPanel(ListModel())
+        node = model.getItem(QModelIndex())
+        self.property_panel = PropertyPanel(TableModel(node))
         self.layout.addWidget(self.tree_panel)
         self.layout.addWidget(self.property_panel)
 
         self.setCentralWidget(central_widget)
+
+        self.controller = PropertyController(self.tree_panel, self.property_panel)
 
 
 if __name__ == "__main__":
@@ -37,5 +42,6 @@ if __name__ == "__main__":
     # app.setStyle("Fusion")
 
     window = TreePropertyWindow(MatplotModel())
+    # window = MainWindow(MatplotModel())
     window.show()
     sys.exit(app.exec())

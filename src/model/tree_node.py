@@ -34,19 +34,34 @@ class TreeNodeBase:
     def removeChild(self, row):
         if 0 <= row < len(self.children):
             self.children.pop(row)
+    
+    def type(self):
+        return "base"
 
 
 class TreeNodeString(TreeNodeBase):
     def __init__(self, name="", value="", parent=None):
         super().__init__(name, parent)
         self.value = value
+        self.type = 'string'
+    
+    def type(self):
+        return self.type
 
 class TreeNodeNumber(TreeNodeBase):
     def __init__(self, name="", value=0, parent=None):
         super().__init__(name, parent)
         self.value = value
+        self.type = 'number'
+    
+    def type(self):
+        return self.type
 
 class TreeNodeGroup(TreeNodeBase):
     def __init__(self, name="", parent=None):
         super().__init__(name, parent)
+        self.type = 'group'
+    
+    def type(self):
+        return self.type
     
