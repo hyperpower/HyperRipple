@@ -70,6 +70,10 @@ class MainWindow(QMainWindow):
         splitter.addWidget(left_splitter)
 
         tab_widget = QTabWidget()
+        tab_widget.setTabsClosable(True)
+        tab_widget.setMovable(True)
+        tab_widget.tabCloseRequested.connect(lambda i: tab_widget.removeTab(i))
+
         tab_widget.addTab(self.canvas, "Plot")
         tab_widget.addTab(QWidget(), "Table")
         splitter.addWidget(tab_widget)

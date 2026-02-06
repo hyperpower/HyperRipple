@@ -24,7 +24,9 @@ class MatplotNode(TreeNodeGroup):
 
         # add default children
         version = matplotlib.__version__
-        self.addChild(TreeNodeString("version", version))
+        version_node = TreeNodeString("version", version)
+        version_node.set_editable(False)  # version is not editable
+        self.addChild(version_node)
         # self.addChild(TreeNodeNumber("test number", 1))
     
 class MatplotRootNode(TreeNodeGroup):

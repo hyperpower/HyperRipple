@@ -12,6 +12,7 @@ class TreePanel(QWidget):
 
         self.tree_view = QTreeView()
         self.tree_view.setModel(self.model)
+        self.tree_view.header().hide()  
 
         layout = QVBoxLayout(self)
         layout.addWidget(self.tree_view)

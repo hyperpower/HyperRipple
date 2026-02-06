@@ -8,15 +8,14 @@ class PropertyDelegate(QStyledItemDelegate):
 
 
     def createEditor(self, parent, option, index):
-        model = index.model()
-        child = model.leaf_children[index.row()] if hasattr(model, 'leaf_children') else None
-        # 只在第二列且类型为number时用滑块
-        if index.column() == 1 and getattr(child, 'type', None) == 'number':
-            slider = QSlider(parent)
-            slider.setOrientation(Qt.Horizontal)
-            slider.setMinimum(0)
-            slider.setMaximum(100)
-            return slider
+        # child = model.leaf_children[index.row()] if hasattr(model, 'leaf_children') else None
+        # # 只在第二列且类型为number时用滑块
+        # if index.column() == 1 and getattr(child, 'type', None) == 'number':
+        #     slider = QSlider(parent)
+        #     slider.setOrientation(Qt.Horizontal)
+        #     slider.setMinimum(0)
+        #     slider.setMaximum(100)
+        #     return slider
         return super().createEditor(parent, option, index)
 
     def setEditorData(self, editor, index):

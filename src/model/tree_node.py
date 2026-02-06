@@ -1,11 +1,9 @@
-
-
-
 class TreeNodeBase:
     def __init__(self, name="", parent=None):
         self.name = name
         self.status = None
         self.type   = None
+        self.editable = True
 
         self.parent = parent 
         self.children = []
@@ -38,6 +36,47 @@ class TreeNodeBase:
     def type(self):
         return "base"
 
+    def is_editable(self):
+        return self.editable
+    
+    def set_editable(self, editable):
+        self.editable = editable
+    
+    def to_dict(self, include_children=True):
+        data = {
+            "name": self.name,
+            "status": self.status,
+            "type": self.type,
+            "editable": self.editable,
+        }
+        if hasattr(self, "value"):
+            data["value"] = self.value
+        if include_children:
+            data["children"] = [child.to_dict(include_children=True) for child in self.children]
+        return data
+
+    @classmethod
+    def from_dict(cls, data, parent=None):
+        node_type = data.get("type", "group")
+        name = data.get("name", "")
+        editable = data.get("editable", True)
+        status = data.get("status", None)
+
+        if node_type == "string":
+            node = TreeNodeString(name, data.get("value", ""), parent)
+        elif node_type == "number":
+            node = TreeNodeNumber(name, data.get("value", 0), parent)
+        else:
+            node = TreeNodeGroup(name, parent)
+
+        node.editable = editable
+        node.status = status
+
+        for child_data in data.get("children", []):
+            TreeNodeBase.from_dict(child_data, node)
+
+        return node
+
 
 class TreeNodeString(TreeNodeBase):
     def __init__(self, name="", value="", parent=None):
@@ -47,6 +86,9 @@ class TreeNodeString(TreeNodeBase):
     
     def type(self):
         return self.type
+    
+    def to_dict(self, include_children=True):
+        return super().to_dict(include_children)
 
 class TreeNodeNumber(TreeNodeBase):
     def __init__(self, name="", value=0, parent=None):
@@ -57,6 +99,9 @@ class TreeNodeNumber(TreeNodeBase):
     def type(self):
         return self.type
 
+    def to_dict(self, include_children=True):
+        return super().to_dict(include_children)
+
 class TreeNodeGroup(TreeNodeBase):
     def __init__(self, name="", parent=None):
         super().__init__(name, parent)
@@ -64,4 +109,6 @@ class TreeNodeGroup(TreeNodeBase):
     
     def type(self):
         return self.type
-    
+
+    def to_dict(self, include_children=True):
+        return super().to_dict(include_children)

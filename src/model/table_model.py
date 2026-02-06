@@ -52,9 +52,10 @@ class TableModel(QAbstractTableModel):
         return False
 
     def flags(self, index):
+        child = self.leaf_children[index.row()] if index.isValid() and index.row() < len(self.leaf_children) else None
         if not index.isValid():
             return Qt.ItemIsEnabled
-        if index.column() == 1:
+        if index.column() == 1 and child is not None and child.is_editable():
             return Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsEditable
         else:
             return Qt.ItemIsSelectable | Qt.ItemIsEnabled

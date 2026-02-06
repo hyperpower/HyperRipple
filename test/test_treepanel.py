@@ -41,7 +41,7 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     # app.setStyle("Fusion")
 
-    window = TreePropertyWindow(MatplotModel())
-    # window = MainWindow(MatplotModel())
+    # window = TreePropertyWindow(MatplotModel())
+    window = MainWindow(MatplotModel())
     window.show()
     sys.exit(app.exec())
