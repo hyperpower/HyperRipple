@@ -3,7 +3,7 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backend_bases import MouseEvent
 
 class MatplotCanvas(FigureCanvas):
-    def __init__(self, parent=None, width=5, height=5, dpi=200):
+    def __init__(self, width=5, height=5, dpi=200):
         self.fig = Figure(figsize=(width, height), dpi=dpi)
         self.axes = self.fig.add_subplot(111)
         # self.axes.set_aspect("equal")

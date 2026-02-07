@@ -11,12 +11,22 @@ from .tree_model import *
 
 
 class MatplotModel(TreeModel):
+    # Explicitly expose a dataChanged signal with the same signature as QAbstractItemModel.
+    dataChanged = Signal(QModelIndex, QModelIndex, list)
     def __init__(self, parent=None):
         super().__init__(MatplotRootNode(), parent)
         root_index = self.index(0,0)
-        self.addFigureItem(root_index, "Figure 1", "Figure")
+        self.addFigureNode(root_index, "Figure 1", "Figure")
 
-    def addFigureItem(self, parent_index: QModelIndex, name: str, item_type: str):
+    def addFigureNode(self, parent_index: QModelIndex, name: str, item_type: str):
         parent_item = self.getItem(parent_index)
+        non_leaf_children = [child for child in parent_item.children if not child.is_leaf()]
+        row = len(non_leaf_children)
+
+        self.beginInsertRows(parent_index, row, row)
         new_item = FigureNode(name)
         parent_item.addChild(new_item)
+        self.endInsertRows()
+
+        new_index = self.index(row, 0, parent_index)
+        self.dataChanged.emit(new_index, new_index, [Qt.DisplayRole])

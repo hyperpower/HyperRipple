@@ -19,6 +19,11 @@ class TableModel(QAbstractTableModel):
             self.leaf_children = []
         else:
             self.leaf_children = [child for child in self.node.children if child.is_leaf()]
+    
+    def getLeafChild(self, index):
+        if 0 <= index.row() < len(self.leaf_children):
+            return self.leaf_children[index.row()]
+        return None
 
     def rowCount(self, parent=QModelIndex()):
         return len(self.leaf_children)
@@ -31,7 +36,7 @@ class TableModel(QAbstractTableModel):
             return None
         if index.row() >= len(self.leaf_children):
             return None
-        child = self.leaf_children[index.row()]
+        child = self.getLeafChild(index)
         if role == Qt.DisplayRole or role == Qt.EditRole:
             if index.column() == 0:
                 return child.name

@@ -1,5 +1,12 @@
-class TreeNodeBase:
+from PySide6.QtCore import Signal, QObject
+
+class TreeNodeBase(QObject):
+    dataChanged = Signal(object, object)  # Signal to indicate data change
+    layoutChanged = Signal(object, object, object)  # Signal to indicate layout change
+
     def __init__(self, name="", parent=None):
+        super().__init__()
+
         self.name = name
         self.status = None
         self.type   = None
@@ -13,6 +20,12 @@ class TreeNodeBase:
 
     def child(self, row):
         return self.children[row] if 0 <= row < len(self.children) else None
+    
+    def __getitem__(self, key):
+        for child in self.children:
+            if child.name == key:
+                return child
+        raise KeyError(f"No child with name: {key}")
 
     def childCount(self):
         return len(self.children)
@@ -41,7 +54,7 @@ class TreeNodeBase:
     
     def set_editable(self, editable):
         self.editable = editable
-    
+
     def to_dict(self, include_children=True):
         data = {
             "name": self.name,
@@ -77,6 +90,9 @@ class TreeNodeBase:
 
         return node
 
+    def __str__(self):
+        return f"TreeNode(name={self.name}, type={self.type}, len_children={len(self.children)})"
+
 
 class TreeNodeString(TreeNodeBase):
     def __init__(self, name="", value="", parent=None):
@@ -90,6 +106,24 @@ class TreeNodeString(TreeNodeBase):
     def to_dict(self, include_children=True):
         return super().to_dict(include_children)
 
+    def allowed_actions(self):
+        return []
+
+class TreeNodeBoolean(TreeNodeBase):
+    def __init__(self, name="", value=False, parent=None):
+        super().__init__(name, parent)
+        self.value = value
+        self.type = 'boolean'
+    
+    def type(self):
+        return self.type
+
+    def to_dict(self, include_children=True):
+        return super().to_dict(include_children)
+
+    def allowed_actions(self):
+        return []
+
 class TreeNodeNumber(TreeNodeBase):
     def __init__(self, name="", value=0, parent=None):
         super().__init__(name, parent)
@@ -102,6 +136,9 @@ class TreeNodeNumber(TreeNodeBase):
     def to_dict(self, include_children=True):
         return super().to_dict(include_children)
 
+    def allowed_actions(self):
+        return []
+
 class TreeNodeGroup(TreeNodeBase):
     def __init__(self, name="", parent=None):
         super().__init__(name, parent)
@@ -112,3 +149,6 @@ class TreeNodeGroup(TreeNodeBase):
 
     def to_dict(self, include_children=True):
         return super().to_dict(include_children)
+
+    def allowed_actions(self):
+        return ["rename", "delete"]

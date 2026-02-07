@@ -14,6 +14,8 @@ from controller.property_controller import PropertyController
 from view.tree_panel import TreePanel
 from view.property_panel import PropertyPanel 
 from model.matplot_model import MatplotModel
+from model.tree_model import TreeModel
+from model.matplot_node import MatplotNode
 from model.table_model import TableModel
 from view.main_window import MainWindow
 
@@ -42,6 +44,6 @@ if __name__ == "__main__":
     # app.setStyle("Fusion")
 
     # window = TreePropertyWindow(MatplotModel())
-    window = MainWindow(MatplotModel())
+    window = MainWindow(MatplotNode())
     window.show()
     sys.exit(app.exec())
