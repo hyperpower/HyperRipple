@@ -1,15 +1,17 @@
+from PySide6.QtCore import Qt
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas, NavigationToolbar2QT as NavigationToolbar
 from matplotlib.backend_bases import MouseEvent
 
 class MatplotCanvas(FigureCanvas):
-    def __init__(self, width=5, height=5, dpi=200):
+    def __init__(self, node, width=5, height=5, dpi=200):
+        self._figure_node = node
         self.fig = Figure(figsize=(width, height), dpi=dpi)
         self.axes = self.fig.add_subplot(111)
         # self.axes.set_aspect("equal")
         self.fig.subplots_adjust(left=0.1, right=0.9, bottom=0.12, top=0.92)
         super(MatplotCanvas, self).__init__(self.fig)
-
+        
         # 平移相关状态
         self._panning = False
         self._press_disp = None      # 按下时的显示坐标 (event.x, event.y)
@@ -29,6 +31,29 @@ class MatplotCanvas(FigureCanvas):
         # 选中线的状态
         self._selected_line = None
         self._selected_line_prev_color = None
+    
+    def _render_figure_from_node(self, node):
+        """根据 FigureNode 的属性渲染图形内容。"""
+        self.axes.clear()
+        self.fig.set_figwidth(node["width"].value)
+        self.fig.set_figheight(node["height"].value)
+        self.fig.set_dpi(node["dpi"].value)
+        self.fig.suptitle(node["title"].value)
+
+        for ax in node.iter_by_class("AxesNode"):
+            self.axes.set_xlabel(ax["xlabel"].value)
+            self.axes.set_ylabel(ax["ylabel"].value)
+            self.axes.set_title(ax["title"].value)
+            for data_node in ax.iter_by_class("DataNode"):
+                x_data = data_node["x"].value
+                y_data = data_node["y"].value
+                self.axes.plot(x_data, y_data, label=data_node["label"].value)
+
+        # self.axes.set_xlim(node["Axes"]["xlim_min"].value, node["Axes"]["xlim_max"].value)
+        # self.axes.set_ylim(node["Axes"]["ylim_min"].value, node["Axes"]["ylim_max"].value)
+        # Get data from DataNode children
+        self.axes.grid(True)
+
 
     def highlight_title_if_clicked(self, event) -> bool:
         """

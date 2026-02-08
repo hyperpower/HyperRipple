@@ -27,6 +27,11 @@ class TreeNodeBase(QObject):
             if child.name == key:
                 return child
         raise KeyError(f"No child with name: {key}")
+    
+    
+    
+    def __iter__(self):
+        return iter(self.children)
 
     def childCount(self):
         return len(self.children)
@@ -115,6 +120,14 @@ class TreeNodeBase(QObject):
         type_names = ", ".join(self.get_type_names())
         return f"TreeNode(name={self.name}, types=[{type_names}], len_children={len(self.children)})"
 
+    def iter_by_class(self, class_name: str):
+        """
+        Generator: yield child nodes whose class name matches `class_name`.
+        """
+        for child in self.children:
+            if child.__class__.__name__ == class_name:
+                yield child
+
 
 class TreeNodeString(TreeNodeBase):
     def __init__(self, name="", value="", parent=None):
@@ -135,6 +148,18 @@ class TreeNodeNumber(TreeNodeBase):
 
     def allowed_actions(self):
         return []
+
+class TreeNodeArray(TreeNodeBase):
+    def __init__(self, name="", value=None, parent=None):
+        super().__init__(name, parent)
+        if value is None:
+            value = []
+        self.value = value
+        self.type = NTR.get("ARRAY") | NTR.get("OPENABLE")
+
+    def allowed_actions(self):
+        return []
+
 
 
 class TreeNodeGroup(TreeNodeBase):

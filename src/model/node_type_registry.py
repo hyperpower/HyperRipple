@@ -45,6 +45,7 @@ class NodeTypeRegistry:
 
 # 预注册核心类型
 NodeTypeRegistry.register("NONE")       # 0
+NodeTypeRegistry.register("ARRAY")      # 8
 NodeTypeRegistry.register("STRING")     # 1
 NodeTypeRegistry.register("NUMBER")     # 2
 NodeTypeRegistry.register("BOOLEAN")    # 4

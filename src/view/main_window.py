@@ -85,7 +85,10 @@ class MainWindow(QMainWindow):
         # splitter.addWidget(left_splitter)
 
         self.tab_widget = QTabWidget()
-        
+        self.tab_widget.setMovable(True)
+        self.tab_widget.tabCloseRequested.connect(lambda i: self.tab_widget.removeTab(i))
+        self.tab_widget.tabBar().setExpanding(False)
+        self.tab_widget.tabBar().setUsesScrollButtons(True) 
 
         self.tab_widget.setStyle(LeftAlignedTabStyle())
         
@@ -120,12 +123,9 @@ class MainWindow(QMainWindow):
     
     def add_new_figure_tab(self, canvas, title):
         self.tab_widget.addTab(canvas, title)
+        self.tab_widget.setTabsClosable(True)
         self.tab_widget.setCurrentWidget(canvas)
 
-        self.tab_widget.setTabsClosable(True)
-        self.tab_widget.setMovable(True)
-        self.tab_widget.tabCloseRequested.connect(lambda i: self.tab_widget.removeTab(i))
-        self.tab_widget.tabBar().setExpanding(False)
-        self.tab_widget.tabBar().setUsesScrollButtons(True)
+        
     
     

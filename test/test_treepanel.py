@@ -38,12 +38,22 @@ class TreePropertyWindow(QMainWindow):
 
         self.controller = PropertyController(self.tree_panel, self.property_panel)
 
+def predefined_matplot_node():
+    matplot_node = MatplotNode("Plot")
+    matplot_node.new_figure("Figure 1")
+    matplot_node.new_figure("Figure 2")
+
+    return matplot_node
+
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     # app.setStyle("Fusion")
 
     # window = TreePropertyWindow(MatplotModel())
-    window = MainWindow(MatplotNode())
+    mnode = predefined_matplot_node() 
+    window = MainWindow(mnode)
     window.show()
+    # window.main_node.new_figure("Figure 1")
     sys.exit(app.exec())
