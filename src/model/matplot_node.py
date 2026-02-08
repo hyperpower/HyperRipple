@@ -4,6 +4,8 @@ import matplotlib
 from .tree_node import *
 
 class FigureNode(TreeNodeGroup):
+    openRequested = Signal(object)  # 定义一个信号，用于请求打开图形界面
+
     def __init__(self, name="Figure"):
         super().__init__(name)
 
@@ -16,6 +18,13 @@ class FigureNode(TreeNodeGroup):
         axes_node.addChild(TreeNodeString("xlabel", "X-axis"))
         axes_node.addChild(TreeNodeString("ylabel", "Y-axis"))
         self.addChild(axes_node)
+    
+    def allowed_actions(self):
+        return ["Open"]
+    
+    def open(self):
+        print(f"Requesting to open figure: {self.name}")
+        self.openRequested.emit(self)  # Emit signal to request opening the figure
 
 
 class MatplotNode(TreeNodeGroup):

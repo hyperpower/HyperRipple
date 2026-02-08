@@ -12,7 +12,7 @@ from view.matplot_canvas import MatplotCanvas
 from model.table_model import TableModel
 from model.tree_model import TreeModel
 from controller.property_controller import PropertyController
-from controller.matplot_controller import MatplotController
+from controller.matplot_controller import CanvasController
 from controller.matplot_controller import MainWindowController
 # from view.view import View
 
@@ -28,7 +28,7 @@ class MainWindow(QMainWindow):
     def __init__(self, node=None, parent=None):
         super().__init__()
         # self.canvas = MatplotCanvas(self, width=5, height=4, dpi=100)
-        self.canvas = []
+        # self.canvas = []
         self.main_node = node
         self._init_window(node)
 
@@ -71,7 +71,7 @@ class MainWindow(QMainWindow):
         self.property_panel = PropertyPanel(table_model)
 
         self.controller = PropertyController(self.tree_panel, self.property_panel)
-        self.matplot_controller = MatplotController(table_model, self.canvas)
+        # self.matplot_controller = CanvasController(table_model, self.canvas)
         # self.tree_panel.item_selected.connect(self.property_panel.refresh_panel)
         # self.tree_panel.item_selected.connect(self.property_panel.refresh_panel_path)
 
