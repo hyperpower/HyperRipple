@@ -14,7 +14,7 @@ from model.tree_model import TreeModel
 from controller.property_controller import PropertyController
 from controller.matplot_controller import CanvasController
 from controller.matplot_controller import MainWindowController
-# from view.view import View
+from view.aspect_ratio_container import AspectRatioContainer
 
 
 class LeftAlignedTabStyle(QProxyStyle):
@@ -117,15 +117,31 @@ class MainWindow(QMainWindow):
         # 你可以设置 dock 的初始大小和位置
         self.tab_widget = QTabWidget()
         self.setCentralWidget(self.tab_widget)
+        self.tab_widget.setTabsClosable(True)  # 允许关闭
+        self.tab_widget.setMovable(True)
+        self.tab_widget.tabCloseRequested.connect(self.tab_widget.removeTab)  # 只连接一次
+        self.tab_widget.tabBar().setExpanding(False)
+        self.tab_widget.tabBar().setUsesScrollButtons(True)
+        self.tab_widget.setStyle(LeftAlignedTabStyle())
 
         # 初始绘图
         # pm.update_canvas("plot_1")
     
     def add_new_figure_tab(self, canvas, title):
-        self.tab_widget.addTab(canvas, title)
-        self.tab_widget.setTabsClosable(True)
-        self.tab_widget.setCurrentWidget(canvas)
+        """
+        Wrap the canvas with AspectRatioContainer so the canvas scales to fit the tab
+        while preserving the canvas' figure aspect ratio and staying centered.
+        """
+        aspect = 1.0
+        try:
+            aspect = canvas.fig.get_figwidth() / canvas.fig.get_figheight()
+        except Exception:
+            pass
 
-        
-    
-    
+        container = AspectRatioContainer(canvas, aspect_ratio=aspect)
+        self.tab_widget.addTab(container, title)
+        self.tab_widget.setCurrentWidget(container)
+
+
+
+

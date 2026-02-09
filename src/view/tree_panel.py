@@ -1,11 +1,12 @@
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QTreeView, QMenu
-from PySide6.QtCore import Signal, Qt
+from PySide6.QtCore import Signal, Qt, Slot
 
 from controller.tree_controller import TreePanelController
 
 class TreePanel(QWidget):
     nodeSelected = Signal(object)  # 发出选中的节点对象
     requestBuildContextMenu = Signal(object, object)  # 发出请求构建右键菜单的信号
+    nodeDoubleClicked = Signal(object)  # 可供外部连接
 
     def __init__(self, model, parent=None):
         super().__init__(parent)
@@ -21,6 +22,7 @@ class TreePanel(QWidget):
 
         # 左键点击
         self.tree_view.clicked.connect(self.on_item_clicked)
+        self.tree_view.doubleClicked.connect(self._on_double_clicked)
 
         # 右键菜单
         self.tree_view.setContextMenuPolicy(Qt.CustomContextMenu)
@@ -58,6 +60,20 @@ class TreePanel(QWidget):
             menu.addAction("Collapse All", self.tree_view.collapseAll)
             menu.addSeparator()
         return menu
+
+    @Slot('QModelIndex')
+    def _on_double_clicked(self, index):
+        if not index.isValid():
+            return
+        node = index.internalPointer() if hasattr(index, "internalPointer") else None
+        if node and hasattr(node, "openRequested"):
+            # 如果节点有 openRequested 信号，直接发出
+            print(f"TreePanel: double clicked node {node.name} has openRequested signal.")
+            node.openRequested.emit(node)
+        else:
+            # 否则发出自定义信号，由 controller 处理
+            print(f"TreePanel: double clicked node {node.name} without openRequested signal.")
+            self.nodeDoubleClicked.emit(node)
 
 class TreeWindow(QWidget):
     def __init__(self, model, parent=None):

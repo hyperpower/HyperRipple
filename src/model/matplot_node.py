@@ -63,7 +63,6 @@ class FigureNode(TreeNodeGroup):
         return ["Open"]
     
     def open(self):
-        print(f"Requesting to open figure: {self['title'].value}")
         self.openRequested.emit(self)  # Emit signal to request opening the figure
 
 
