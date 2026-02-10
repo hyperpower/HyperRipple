@@ -12,6 +12,7 @@ class TreeNodeBase(QObject):
         self.status = None
         self.type = 0  # 位标志
         self.editable = True
+        self.value = None
 
         self.parent = parent 
         self.children = []
@@ -28,7 +29,9 @@ class TreeNodeBase(QObject):
                 return child
         raise KeyError(f"No child with name: {key}")
     
-    
+    def set_value(self, value):
+        self.value = value
+        self.dataChanged.emit(self, value)
     
     def __iter__(self):
         return iter(self.children)
@@ -132,8 +135,8 @@ class TreeNodeBase(QObject):
 class TreeNodeString(TreeNodeBase):
     def __init__(self, name="", value="", parent=None):
         super().__init__(name, parent)
-        self.value = value
         # 使用字符串注册类型
+        self.value = value
         self.type = NTR.get("STRING") | NTR.get("OPENABLE")
 
     def allowed_actions(self):
@@ -152,9 +155,10 @@ class TreeNodeNumber(TreeNodeBase):
 class TreeNodeArray(TreeNodeBase):
     def __init__(self, name="", value=None, parent=None):
         super().__init__(name, parent)
-        if value is None:
-            value = []
         self.value = value
+        
+        if self.value is None:
+            self.value = []
         self.type = NTR.get("ARRAY") | NTR.get("OPENABLE")
 
     def allowed_actions(self):

@@ -3,12 +3,12 @@ from PySide6.QtCore import QRect
 
 class AspectRatioContainer(QWidget):
     """Place a single child widget scaled to fit while preserving an aspect ratio and centered."""
-    def __init__(self, child: QWidget, aspect_ratio: float = 1.0, parent: QWidget | None = None):
+    def __init__(self, canvas: QWidget, aspect_ratio: float = 1.0, parent: QWidget | None = None):
         super().__init__(parent)
-        self._child = child
+        self._canvas = canvas
         self._aspect = float(aspect_ratio) if aspect_ratio and aspect_ratio > 0 else 1.0
-        self._child.setParent(self)
-        self._child.show()
+        self._canvas.setParent(self)
+        self._canvas.show()
 
     def setAspectRatio(self, aspect_ratio: float):
         if aspect_ratio > 0:
@@ -34,4 +34,4 @@ class AspectRatioContainer(QWidget):
 
         x = r.x() + (aw - tw) // 2
         y = r.y() + (ah - th) // 2
-        self._child.setGeometry(QRect(x, y, tw, th))
+        self._canvas.setGeometry(QRect(x, y, tw, th))

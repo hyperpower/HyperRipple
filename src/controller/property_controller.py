@@ -7,6 +7,7 @@ from PySide6.QtCore import Qt, QAbstractListModel, QModelIndex, QSize, Signal, Q
 from PySide6.QtGui import QFont, QColor, QBrush, QPainter, QTextOption
 
 
+
 class PropertyController(QObject):
     def __init__(self, tree_panel, property_panel):
         super().__init__()

@@ -36,7 +36,7 @@ class MainWindow(QMainWindow):
 
     def _init_window(self, node):
         self.setWindowTitle("PyQt Matplotlib")
-        self.setGeometry(350, 350, 1600, 1000)
+        self.setGeometry(350, 350, 800, 600)
 
         # 创建一个主控件和布局
         main_widget = QWidget(self)
@@ -85,13 +85,11 @@ class MainWindow(QMainWindow):
         # splitter.addWidget(left_splitter)
 
         self.tab_widget = QTabWidget()
+        self.tab_widget.setTabsClosable(True)
         self.tab_widget.setMovable(True)
-        self.tab_widget.tabCloseRequested.connect(lambda i: self.tab_widget.removeTab(i))
+        # self.tab_widget.tabCloseRequested.connect(lambda i: self.tab_widget.removeTab(i))
         self.tab_widget.tabBar().setExpanding(False)
         self.tab_widget.tabBar().setUsesScrollButtons(True) 
-
-        self.tab_widget.setStyle(LeftAlignedTabStyle())
-        
 
         splitter = QSplitter()
         splitter.addWidget(self.tab_widget)
@@ -114,18 +112,7 @@ class MainWindow(QMainWindow):
         self.left_toolbar.addAction(tree_toggle_action)
 
 
-        # 你可以设置 dock 的初始大小和位置
-        self.tab_widget = QTabWidget()
-        self.setCentralWidget(self.tab_widget)
-        self.tab_widget.setTabsClosable(True)  # 允许关闭
-        self.tab_widget.setMovable(True)
-        self.tab_widget.tabCloseRequested.connect(self.tab_widget.removeTab)  # 只连接一次
-        self.tab_widget.tabBar().setExpanding(False)
-        self.tab_widget.tabBar().setUsesScrollButtons(True)
-        self.tab_widget.setStyle(LeftAlignedTabStyle())
-
-        # 初始绘图
-        # pm.update_canvas("plot_1")
+        
     
     def add_new_figure_tab(self, canvas, title):
         """
@@ -140,7 +127,16 @@ class MainWindow(QMainWindow):
 
         container = AspectRatioContainer(canvas, aspect_ratio=aspect)
         self.tab_widget.addTab(container, title)
+        # self.tab_widget.setTabsClosable(True)
         self.tab_widget.setCurrentWidget(container)
+    
+    def set_current_figure_tab(self, canvas):
+        """Set the current figure tab to the one containing the given canvas."""
+        for i in range(self.tab_widget.count()):
+            widget = self.tab_widget.widget(i)
+            if isinstance(widget, AspectRatioContainer) and widget._canvas == canvas:
+                self.tab_widget.setCurrentIndex(i)
+                break
 
 
 
