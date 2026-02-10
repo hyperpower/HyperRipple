@@ -10,7 +10,7 @@ class MatplotCanvas(FigureCanvas):
         self.fig = Figure(figsize=(width, height), dpi=dpi)
         self.axes = self.fig.add_subplot(111)
         # self.axes.set_aspect("equal")
-        self.fig.subplots_adjust(left=0.1, right=0.9, bottom=0.12, top=0.92)
+        # self.fig.subplots_adjust(left=0.1, right=0.9, bottom=0.12, top=0.92)
         super(MatplotCanvas, self).__init__(self.fig)
         
         

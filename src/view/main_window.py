@@ -6,15 +6,14 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, QAbstractListModel, QModelIndex, QSize, Signal
 from PySide6.QtGui import QFont, QColor, QBrush, QPainter, QTextOption
+from view.tab_panel import TabPanel
 from view.tree_panel import TreePanel
 from view.property_panel import PropertyPanel
 from view.matplot_canvas import MatplotCanvas
 from model.table_model import TableModel
 from model.tree_model import TreeModel
 from controller.property_controller import PropertyController
-from controller.matplot_controller import CanvasController
-from controller.matplot_controller import MainWindowController
-from view.aspect_ratio_container import AspectRatioContainer
+from controller.main_controller import MainWindowController
 
 
 class LeftAlignedTabStyle(QProxyStyle):
@@ -84,15 +83,10 @@ class MainWindow(QMainWindow):
 
         # splitter.addWidget(left_splitter)
 
-        self.tab_widget = QTabWidget()
-        self.tab_widget.setTabsClosable(True)
-        self.tab_widget.setMovable(True)
-        # self.tab_widget.tabCloseRequested.connect(lambda i: self.tab_widget.removeTab(i))
-        self.tab_widget.tabBar().setExpanding(False)
-        self.tab_widget.tabBar().setUsesScrollButtons(True) 
-
+        self.tab_panel = TabPanel()
+        
         splitter = QSplitter()
-        splitter.addWidget(self.tab_widget)
+        splitter.addWidget(self.tab_panel)
         splitter.setSizes([250, 750])
         hlayout.addWidget(splitter)
 
@@ -111,32 +105,8 @@ class MainWindow(QMainWindow):
         tree_toggle_action.setText("树面板")
         self.left_toolbar.addAction(tree_toggle_action)
 
-
         
     
-    def add_new_figure_tab(self, canvas, title):
-        """
-        Wrap the canvas with AspectRatioContainer so the canvas scales to fit the tab
-        while preserving the canvas' figure aspect ratio and staying centered.
-        """
-        aspect = 1.0
-        try:
-            aspect = canvas.fig.get_figwidth() / canvas.fig.get_figheight()
-        except Exception:
-            pass
-
-        container = AspectRatioContainer(canvas, aspect_ratio=aspect)
-        self.tab_widget.addTab(container, title)
-        # self.tab_widget.setTabsClosable(True)
-        self.tab_widget.setCurrentWidget(container)
-    
-    def set_current_figure_tab(self, canvas):
-        """Set the current figure tab to the one containing the given canvas."""
-        for i in range(self.tab_widget.count()):
-            widget = self.tab_widget.widget(i)
-            if isinstance(widget, AspectRatioContainer) and widget._canvas == canvas:
-                self.tab_widget.setCurrentIndex(i)
-                break
 
 
 
