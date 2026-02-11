@@ -47,21 +47,26 @@ class TreeModel(QAbstractItemModel):
             return index.internalPointer()
         return self.root
 
-    def index_from_node(self, node, parent_index=QModelIndex()):
+    def index_from_node(self, obj_node, parent_index=QModelIndex()):
         """
         递归查找给定节点对应的 QModelIndex。
         """
-        if not parent_index.isValid():
-            parent_node = self.root
-        else:
-            parent_node = parent_index.internalPointer()
-
-        if node is parent_node:
+        node = self.getItem(parent_index)
+        if node == obj_node:
             return parent_index
-
-        for row, child in enumerate(getattr(parent_node, "children", [])):
-            child_index = self.index(row, 0, parent_index)
-            result = self.index_from_node(node, child_index)
-            if result.isValid():
-                return result
+        else:
+            non_leaf_children = [child for child in node.children if not child.is_leaf()]
+            for row, child in enumerate(non_leaf_children):
+                child_index = self.index(row, 0, parent_index)
+                result = self.index_from_node(obj_node, child_index)
+                if result.isValid():
+                    return result
         return QModelIndex()
+    
+    # def print_all_rows(self, parent_index=QModelIndex(), level=0):
+    #     node = self.getItem(parent_index)
+    #     non_leaf_children = [child for child in node.children if not child.is_leaf()]
+    #     print("  " * level + f"Node: {node.name}, rows: {len(non_leaf_children)}")
+    #     for row, child in enumerate(non_leaf_children):
+    #         child_index = self.index(row, 0, parent_index)
+    #         self.print_all_rows(child_index, level + 1)

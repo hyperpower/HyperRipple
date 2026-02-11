@@ -50,7 +50,12 @@ def predefined_matplot_node():
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     # app.setStyle("Fusion")
+    screen = app.primaryScreen()
 
+    print(f"屏幕名称: {screen.name()}")
+    print(f"逻辑 DPI: {screen.logicalDotsPerInch()}") # 系统缩放后的 DPI (常用)
+    print(f"物理 DPI: {screen.physicalDotsPerInch()}") # 硬件真实的 DPI
+    print(f"设备像素比 (DPR): {screen.devicePixelRatio()}") # 缩放倍数，如 1.25, 2.0
     # window = TreePropertyWindow(MatplotModel())
     mnode = predefined_matplot_node() 
     window = MainWindow(mnode)

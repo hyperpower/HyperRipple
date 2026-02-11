@@ -1,39 +1,20 @@
+import sys
 from PySide6.QtCore import QObject, Signal
-from model.matplot_node import FigureNode
+from model.matplot_node import MatplotNode, FigureNode
 from view.aspect_ratio_container import AspectRatioContainer
 from view.matplot_canvas import MatplotCanvas
-
-class FigureController(QObject):
-    def __init__(self, figure_node, canvas, parent=None):
-        super().__init__(parent)
-
-        self.figure_node = figure_node
-        self.canvas = canvas
-
-        self.connect_all_children()
-
-    def on_data_changed(self, node, value):
-        print(f"{node.parent.name} node {node.name} changed to value: {value}")
-        
-        
-    def connect_recursive(self, node):
-        node.dataChanged.connect(self.on_data_changed)
-        for child in getattr(node, "children", []):
-            self.connect_recursive(child)
-    
-    def connect_all_children(self):
-        self.connect_recursive(self.figure_node)
+from controller.figure_controller import FigureController
 
 
+class TabController(QObject):
 
-class CanvasController(QObject):
     """Connects a Matplot model to a Matplot canvas."""
     figureAdded = Signal(object, str)  # Signal emitted when a new figure is added
 
-    def __init__(self, main_window, parent=None):
+    def __init__(self, matplot_node, tab_panel, parent=None):
         super().__init__(parent)
-        self.main_window = main_window
-        self.matplot_node = main_window.main_node
+        self.tab_panel = tab_panel
+        self.matplot_node = matplot_node
         # List of open MatplotCanvas instances, 
         # (figure_node, canvas)
         self.open_canvases = [] 
@@ -41,7 +22,8 @@ class CanvasController(QObject):
         self.matplot_node.dataChanged.connect(self.on_data_changed)
         self.matplot_node.layoutChanged.connect(self.on_layout_changed)
 
-        self.main_window.tab_widget.tabCloseRequested.connect(self.on_tab_close_requested)  
+        self.tab_panel.tabCloseRequested.connect(self.on_tab_close_requested)  
+        self.figureAdded.connect(self.tab_panel.add_new_figure_tab)
 
         self._init_connect()
     
@@ -49,13 +31,25 @@ class CanvasController(QObject):
         for fn in self.matplot_node:
             if isinstance(fn, FigureNode):
                 fn.openRequested.connect(self.on_figure_open_requested)
+    
+    def get_canvas_by_figure_node(self, figure_node):
+        """Retrieve the canvas associated with a given figure node."""
+        for fn, canvas, controller in self.open_canvases:
+            if fn == figure_node:
+                return canvas
+        return None
         
 
     def on_data_changed(self, node, value):
         """Redraw the canvas when the model changes."""
         # nbegin = self.matplot_node.getLeafChild(begin_index)  # 
         # print(f"Changed from: {nbegin}")
-        print("Node name :", node.name, " changed to value:", value)
+        if node.name in ["width", "height"]:
+            canvas = self.get_canvas_by_figure_node(node.parent)
+            if canvas:
+                fn = node.parent
+                aspect_ratio = fn["width"].value / fn["height"].value
+                self.tab_panel.update_figure_aspect_ratio(canvas, aspect_ratio)
     
     def on_layout_changed(self, main_node, fig_node, msg):
         """Redraw the canvas when the layout changes."""
@@ -70,6 +64,8 @@ class CanvasController(QObject):
         """Add a new figure canvas for the given figure node."""
         canvas = MatplotCanvas(figure_node)
         controller = FigureController(figure_node, canvas)
+        figure_node["width"].dataChanged.connect(self.on_data_changed)
+        figure_node["height"].dataChanged.connect(self.on_data_changed)
         canvas._render_figure_from_node(figure_node)  
         self.open_canvases.append((figure_node, canvas, controller))  # Store the controller as well
         figure_node.openRequested.connect(self.on_figure_open_requested)
@@ -80,7 +76,7 @@ class CanvasController(QObject):
         # Check if the figure is already open
         for fn, canvas, controller in self.open_canvases:
             if fn == figure_node:
-                self.main_window.set_current_figure_tab(canvas)  # Bring to front
+                self.tab_panel.set_current_figure_tab(canvas)  # Bring to front
                 return  # Already open
 
         # If not open, add a new figure
@@ -88,7 +84,7 @@ class CanvasController(QObject):
 
     def on_tab_close_requested(self, tab_index):
         """Handle the request to close a tab."""
-        container = self.main_window.tab_widget.widget(tab_index)
+        container = self.tab_panel.widget(tab_index)
         if isinstance(container, AspectRatioContainer) and hasattr(container, '_canvas'):
             canvas = container._canvas
             if canvas is None or not hasattr(canvas, '_figure_node'):
@@ -99,18 +95,4 @@ class CanvasController(QObject):
                     if c == canvas:
                         self.open_canvases.pop(i)
                         break
-                self.main_window.tab_widget.removeTab(tab_index)
-
-class MainWindowController(QObject):
-    def __init__(self, main_window):
-        super().__init__()
-        self.main_window = main_window
-
-        self.matplot_controller = CanvasController(
-            self.main_window)
-        
-        self.matplot_controller.figureAdded.connect(self.main_window.add_new_figure_tab)
-        
-
-    
-        
+                self.tab_panel.removeTab(tab_index)

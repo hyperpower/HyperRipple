@@ -5,12 +5,12 @@ from matplotlib.backend_bases import MouseEvent
 
 
 class MatplotCanvas(FigureCanvas):
-    def __init__(self, node, width=5, height=5, dpi=150):
+    def __init__(self, node ):
         self._figure_node = node
-        self.fig = Figure(figsize=(width, height), dpi=dpi)
+        self.fig = Figure()
         self.axes = self.fig.add_subplot(111)
         # self.axes.set_aspect("equal")
-        self.fig.subplots_adjust(left=0.1, right=0.9, bottom=0.12, top=0.92)
+        # self.fig.subplots_adjust(left=0.1, right=0.9, bottom=0.12, top=0.92)
         super(MatplotCanvas, self).__init__(self.fig)
         
         
@@ -37,8 +37,8 @@ class MatplotCanvas(FigureCanvas):
     def _render_figure_from_node(self, node):
         """根据 FigureNode 的属性渲染图形内容。"""
         self.axes.clear()
-        self.fig.set_figwidth(node["width"].value)
-        self.fig.set_figheight(node["height"].value)
+        # self.fig.set_figwidth(node["width"].value)
+        # self.fig.set_figheight(node["height"].value)
         self.fig.set_dpi(node["dpi"].value)
         self.fig.suptitle(node["title"].value)
 

@@ -51,6 +51,8 @@ class TableModel(QAbstractTableModel):
             return False
         child = self.leaf_children[index.row()]
         if role == Qt.EditRole:
+            if child.value == value:
+                return False  # No change
             child.value = value
             child.dataChanged.emit(child, value)
             self.dataChanged.emit(index, index, [Qt.DisplayRole, Qt.EditRole])
