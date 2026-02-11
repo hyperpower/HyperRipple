@@ -33,6 +33,18 @@ class AxesNode(TreeNodeGroup):
         self.addChild(TreeNodeNumber("ylim_max", 1))
 
         self.addChild(DataNode("Data 1"))
+    
+    def default_properties(self):
+        return {
+            "index": 1,
+            "xlabel": "X-axis",
+            "ylabel": "Y-axis",
+            "title": "My Axes",
+            "xlim_min": 0,
+            "xlim_max": 1,
+            "ylim_min": 0,
+            "ylim_max": 1
+        }
 
 class FigureNode(TreeNodeGroup):
     openRequested = Signal(object)  # 定义一个信号，用于请求打开图形界面
@@ -41,18 +53,31 @@ class FigureNode(TreeNodeGroup):
         super().__init__(name)
 
         # add default children
-        self.addChild(TreeNodeString("title", "My Figure"))
-        self.addChild(TreeNodeNumber("width",  4))
-        self.addChild(TreeNodeNumber("height", 3))
-        self.addChild(TreeNodeNumber("dpi",  100))
-        axes_grid_node = TreeNodeGroup("Axes Grid")
-        axes_grid_node.addChild(TreeNodeNumber("nrows", 1))
-        axes_grid_node.addChild(TreeNodeNumber("ncols", 1))
-        self.addChild(axes_grid_node)
+        # self.addChild(TreeNodeString("title", "My Figure"))
+        # self.addChild(TreeNodeNumber("width",  4))
+        # self.addChild(TreeNodeNumber("height", 3))
+        # self.addChild(TreeNodeNumber("dpi",  100))
+        # axes_grid_node = TreeNodeGroup("Axes Grid")
+        # axes_grid_node.addChild(TreeNodeNumber("nrows", 1))
+        # axes_grid_node.addChild(TreeNodeNumber("ncols", 1))
+        # self.addChild(axes_grid_node)
+        self.build_default_children(self.default_properties())
 
         axes_node = AxesNode("Axes")
         self.addChild(axes_node)
     
+    def default_properties(self):
+        return {
+            "title": "My Figure",
+            "width":  4,
+            "height": 3,
+            "axes_grid": {
+                "nrows": 1,
+                "ncols": 1
+            }
+        }
+    
+   
     def allowed_actions(self):
         return ["Open"]
     

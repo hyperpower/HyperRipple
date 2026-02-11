@@ -39,7 +39,7 @@ class MatplotCanvas(FigureCanvas):
         self.axes.clear()
         # self.fig.set_figwidth(node["width"].value)
         # self.fig.set_figheight(node["height"].value)
-        self.fig.set_dpi(node["dpi"].value)
+        # self.fig.set_dpi(50)
         self.fig.suptitle(node["title"].value)
 
         for ax in node.iter_by_class("AxesNode"):

@@ -47,3 +47,16 @@ class TabPanel(QTabWidget):
             if isinstance(widget, AspectRatioContainer) and widget._canvas == canvas:
                 self.setCurrentIndex(i)
                 break
+        
+    def set_current_figure_tab_by_node(self, node):
+        """Set the current figure tab to the one containing the canvas for the given figure node and its children node."""
+        anode = node.get_ancestor_by_class_name("FigureNode")
+        if anode is None:
+            return
+        for i in range(self.count()):
+            widget = self.widget(i)
+            if isinstance(widget, AspectRatioContainer) and hasattr(widget, '_canvas'):
+                canvas = widget._canvas
+                if hasattr(canvas, '_figure_node') and canvas._figure_node == anode:
+                    self.setCurrentIndex(i)
+                    break

@@ -18,4 +18,4 @@ class FigureController(QObject):
             self.connect_recursive(child)
     
     def connect_all_children(self):
-        self.connect_recursive(self.figure_node)
+        self.connect_recursive(self.figure_node)  

@@ -14,12 +14,11 @@ class MainWindowController(QObject):
         self.tab_controller = TabController(
             self.main_window.main_node, self.main_window.tab_panel)
         # 监听tab切换信号
-        self.main_window.tab_panel.currentChanged.connect(self.on_tab_selection_changed)
-
-    def on_tab_selection_changed(self, index):
-        """
-        link the tab panel with the tree panel selection
-        """
+        self.main_window.tab_panel.tabBar().tabBarClicked.connect(self.on_tab_clicked)
+        self.main_window.tree_panel.nodeSelected.connect(self.main_window.property_panel.setNode)
+        self.main_window.tree_panel.nodeSelected.connect(self.main_window.tab_panel.set_current_figure_tab_by_node)
+    
+    def on_tab_clicked(self, index):
         # tree_model = self.main_window.tree_panel.model
         # tree_model.print_all_rows()  # 调试输出树结构
         tab_widget = self.main_window.tab_panel.widget(index)
@@ -31,6 +30,9 @@ class MainWindowController(QObject):
             if tree_index.isValid():
                 self.main_window.tree_panel.tree_view.setCurrentIndex(tree_index)
                 self.main_window.tree_panel.nodeSelected.emit(figure_node)
+
+
+        
         
        
         

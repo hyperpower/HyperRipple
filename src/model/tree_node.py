@@ -19,6 +19,21 @@ class TreeNodeBase(QObject):
 
         if parent is not None:
             parent.children.append(self)
+    
+    def get_class_name(self):
+        return self.__class__.__name__
+    
+    def get_ancestor_by_class_name(self, class_name : str):
+        """Return a list of ancestor nodes of a specific class name."""
+        if self.get_class_name() == class_name:
+            return self
+        else:
+            current = self.parent
+            while current is not None:
+                if current.get_class_name() == class_name:
+                    return current
+                current = current.parent
+        return None
 
     def child(self, row):
         return self.children[row] if 0 <= row < len(self.children) else None
@@ -130,6 +145,25 @@ class TreeNodeBase(QObject):
         for child in self.children:
             if child.__class__.__name__ == class_name:
                 yield child
+    
+    def build_default_children(self, properties: dict = None):
+        self._build_node_by_properties(self, properties)
+    
+    @classmethod 
+    def _build_node_by_properties(cls, root_node, properties: dict):
+        for key, value in properties.items():
+            if isinstance(value, dict):
+                node = TreeNodeGroup(key)
+                cls._build_node_by_properties(node, value)
+            elif isinstance(value, str):
+                node = TreeNodeString(key, value)
+                root_node.addChild(node)
+            elif isinstance(value, (int, float)):
+                node = TreeNodeNumber(key, value)
+                root_node.addChild(node)
+            else:
+                raise ValueError(f"Unsupported property type for key '{key}': {type(value)}")
+    
 
 
 class TreeNodeString(TreeNodeBase):

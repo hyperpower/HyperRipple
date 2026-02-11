@@ -10,7 +10,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../s
 # ...existing code...delegate.delegate import TaskDelegate
 # from view.view import View
 
-from controller.property_controller import PropertyController
+# from controller.property_controller import PropertyController
 from view.tree_panel import TreePanel
 from view.property_panel import PropertyPanel 
 from model.matplot_model import MatplotModel
@@ -36,7 +36,7 @@ class TreePropertyWindow(QMainWindow):
 
         self.setCentralWidget(central_widget)
 
-        self.controller = PropertyController(self.tree_panel, self.property_panel)
+        # self.controller = PropertyController(self.tree_panel, self.property_panel)
 
 def predefined_matplot_node():
     matplot_node = MatplotNode("Plot")

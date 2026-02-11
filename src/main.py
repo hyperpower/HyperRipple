@@ -9,7 +9,7 @@ from model.matplot_model import MatplotModel
 from model.model import FolderModel, TaskModel
 from delegate.delegate import TaskDelegate
 # from view.view import View
-from controller.controller import PropertyController
+# from controller.controller import PropertyController
 from view.main_window import MainWindow
 from view.tree_panel import TreeWindow
 
