@@ -11,10 +11,10 @@
             "problemMatcher": []
         },
         {
-            "label": "Run treepanel.py",
+            "label": "Run data extraction.py",
             "type": "shell",
             "command": "${command:python.interpreterPath}",
-            "args": ["${workspaceFolder}/test/test_treepanel.py"],
+            "args": ["${workspaceFolder}/test/test_data_extraction.py"],
             "group": {"kind": "build", "isDefault": false},
             "presentation": {"reveal": "always"},
             "problemMatcher": []

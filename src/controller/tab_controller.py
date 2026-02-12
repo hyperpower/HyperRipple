@@ -11,26 +11,31 @@ class TabController(QObject):
     """Connects a Matplot model to a Matplot canvas."""
     figureAdded = Signal(object, str)  # Signal emitted when a new figure is added
 
-    def __init__(self, matplot_node, tab_panel, parent=None):
+    def __init__(self, main_node, tab_panel, parent=None):
         super().__init__(parent)
         self.tab_panel = tab_panel
-        self.matplot_node = matplot_node
+        self.main_node = main_node
         # List of open MatplotCanvas instances, 
         # (figure_node, canvas)
         self.open_canvases = [] 
 
-        self.matplot_node.dataChanged.connect(self.on_data_changed)
-        self.matplot_node.layoutChanged.connect(self.on_layout_changed)
+        self.main_node.dataChanged.connect(self.on_data_changed)
+        self.main_node.layoutChanged.connect(self.on_layout_changed)
 
         self.tab_panel.tabCloseRequested.connect(self.on_tab_close_requested)  
         self.figureAdded.connect(self.tab_panel.add_new_figure_tab)
 
         self._init_connect()
-    
+
+    def recursive_connect(self, node):
+        for child in node:
+            if isinstance(child, FigureNode):
+                child.openRequested.connect(self.on_figure_open_requested)
+            # 递归遍历子节点
+            self.recursive_connect(child)
+
     def _init_connect(self):
-        for fn in self.matplot_node:
-            if isinstance(fn, FigureNode):
-                fn.openRequested.connect(self.on_figure_open_requested)
+        self.recursive_connect(self.main_node)
     
     def get_canvas_by_figure_node(self, figure_node):
         """Retrieve the canvas associated with a given figure node."""

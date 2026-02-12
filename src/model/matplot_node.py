@@ -77,7 +77,6 @@ class FigureNode(TreeNodeGroup):
             }
         }
     
-   
     def allowed_actions(self):
         return ["Open"]
     
@@ -111,6 +110,7 @@ class MatplotNode(TreeNodeGroup):
                 child.value = self.count_figures()
                 break
         self.layoutChanged.emit(self, fig_node, "add")  
+        return fig_node
     
     def allowed_actions(self):
         return ["New Figure"]  # No actions allowed on MatplotNode

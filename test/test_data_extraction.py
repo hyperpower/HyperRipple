@@ -15,36 +15,15 @@ from view.tree_panel import TreePanel
 from view.property_panel import PropertyPanel 
 from model.matplot_model import MatplotModel
 from model.tree_model import TreeModel
-from model.matplot_node import MatplotNode
+# from model.matplot_node import MatplotNode
 from model.table_model import TableModel
 from view.main_window import MainWindow
+from data_extraction.deta_extraction_node import DataExtractionRootNode, DataExtractionNode
 
-class TreePropertyWindow(QMainWindow):
-    def __init__(self, model, parent=None):
-        super().__init__(parent)
-        self.setWindowTitle("Tree Property Panel")
-        self.resize(400, 300)
-
-        central_widget = QWidget(self)
-        self.layout = QVBoxLayout(central_widget)
-
-        self.tree_panel = TreePanel(model)
-        node = model.getItem(QModelIndex())
-        self.property_panel = PropertyPanel(TableModel(node))
-        self.layout.addWidget(self.tree_panel)
-        self.layout.addWidget(self.property_panel)
-
-        self.setCentralWidget(central_widget)
-
-        # self.controller = PropertyController(self.tree_panel, self.property_panel)
 
 def predefined_matplot_node():
-    matplot_node = MatplotNode("Plot")
-    fn = matplot_node.new_figure("Figure 1")
-    fn["width"].set_value(2)
-    matplot_node.new_figure("Figure 2")
-
-    return matplot_node
+    node =  DataExtractionNode("Data Extraction")
+    return node
 
 
 

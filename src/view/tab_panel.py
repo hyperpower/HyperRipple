@@ -4,6 +4,9 @@ from PySide6.QtWidgets import (
     QLabel, QSplitter, QTabWidget, QProxyStyle, QDockWidget, QToolBar
 )
 from view.aspect_ratio_container import AspectRatioContainer
+import warnings
+
+
 
 class TabPanel(QTabWidget):
     def __init__(self, parent=None):
@@ -31,9 +34,9 @@ class TabPanel(QTabWidget):
         """
         aspect = 1.0
         try:
-            aspect = canvas.fig.get_figwidth() / canvas.fig.get_figheight()
+            aspect = canvas._figure_node["width"].value / canvas._figure_node["height"].value
         except Exception:
-            pass
+            warnings.warn("Failed to get aspect ratio from figure node. Using default aspect ratio of 1.0.")
 
         container = AspectRatioContainer(canvas, aspect_ratio=aspect)
         self.addTab(container, title)

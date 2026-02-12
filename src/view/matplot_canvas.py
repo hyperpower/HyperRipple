@@ -5,9 +5,12 @@ from matplotlib.backend_bases import MouseEvent
 
 
 class MatplotCanvas(FigureCanvas):
-    def __init__(self, node ):
+    def __init__(self, node, matfig = None):
         self._figure_node = node
-        self.fig = Figure()
+        if matfig is not None:
+            self.fig = matfig
+        else:
+            self.fig = Figure()
         self.axes = self.fig.add_subplot(111)
         # self.axes.set_aspect("equal")
         # self.fig.subplots_adjust(left=0.1, right=0.9, bottom=0.12, top=0.92)
