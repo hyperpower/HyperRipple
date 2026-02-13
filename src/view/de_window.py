@@ -33,7 +33,7 @@ class DataExtractionWindow(QMainWindow):
 
     def _init_window(self, node):
         self.setWindowTitle("PyQt Matplotlib")
-        self.setGeometry(350, 350, 800, 600)
+        self.setGeometry(300, 350, 1100, 600)
 
         # 创建一个主控件和布局
         main_widget = QWidget(self)
@@ -119,8 +119,8 @@ class DataExtractionWindow(QMainWindow):
 
         self.canvas.axes = fig.add_subplot(111)
         self.canvas.axes.imshow(image)
-        self.canvas.axes.set_xlim(0, width)
-        self.canvas.axes.set_ylim(height, 0)
+        # self.canvas.axes.set_xlim(0, width)
+        # self.canvas.axes.set_ylim(height, 0)
         # ax.set_axis_off()
         fig.tight_layout(pad=0)
         self.canvas.draw_idle()

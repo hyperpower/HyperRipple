@@ -154,7 +154,7 @@ class ZoomWidget(QWidget):
             ax.imshow(
                 img.get_array(),
                 extent=img.get_extent(),
-                origin=img.origin,
+                origin="lower",
                 cmap=img.get_cmap(),
                 interpolation=img.get_interpolation(),
                 vmin=vmin,
