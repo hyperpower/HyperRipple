@@ -23,6 +23,13 @@ class MatplotCanvas(FigureCanvas):
         self._zooming = False
         self._zoom_start = None
         self._zoom_rect = None  # 用于显示缩放区域的矩形补丁
+        # brush
+        self._brushing = False
+        self._brush_points = []
+        self._brush_scatter = None
+        self._brush_last_disp = None
+        self._brush_size = 120  # points^2
+        self._brush_spacing = 6  # pixels
         # pan
         self._panning = False
         self._press_disp = None      # 按下时的显示坐标 (event.x, event.y)
@@ -119,34 +126,53 @@ class MatplotCanvas(FigureCanvas):
         return False
 
     def _on_press(self, event):
+        print(f"Mouse press at ({event.x}, {event.y}) in canvas coords, "              f"data coords ({event.xdata}, {event.ydata}), "
+              f"inaxes: {event.inaxes}")
         # 仅左键且在数据区域内
         if event.button != 1 or event.inaxes is None or event.inaxes is not self.axes:
             return
-        
-        # zoom 模式：记录起点
+
         if self._mode == 'zoom':
-            self._zooming = True
-            self._zoom_start = (event.xdata, event.ydata)
-            # 创建虚线矩形
-            self._zoom_rect = Rectangle(
-                (event.xdata, event.ydata), 0, 0,
-                linewidth=1, edgecolor='red', facecolor='none',
-                linestyle='--'
-            )
-            self.axes.add_patch(self._zoom_rect)
-            self.draw_idle()
-            return
-        
+            self._handle_zoom_press(event)
+        elif self._mode == 'pan':
+            self._handle_pan_press(event)
+        elif self._mode == 'add_point':
+            self._handle_add_point_press(event)
+        elif self._mode == 'brush':
+            self._handle_brush_press(event)
+        else:
+            self._handle_default_press(event)
+
+    def _handle_zoom_press(self, event):
+        # zoom 模式：记录起点
+        self._zooming = True
+        self._zoom_start = (event.xdata, event.ydata)
+        # 创建虚线矩形
+        self._zoom_rect = Rectangle(
+            (event.xdata, event.ydata), 0, 0,
+            linewidth=1, edgecolor='red', facecolor='none',
+            linestyle='--'
+        )
+        self.axes.add_patch(self._zoom_rect)
+        self.draw_idle()
+
+    def _handle_pan_press(self, event):
         # pan 模式：启动平移
-        if self._mode == 'pan':
-            self.setCursor(Qt.ClosedHandCursor)
-            self._panning = True
-            self._press_disp = (event.x, event.y)
-            self._press_xlim = self.axes.get_xlim()
-            self._press_ylim = self.axes.get_ylim()
-            self._inv_trans = self.axes.transData.inverted()
-            return
-        
+        self.setCursor(Qt.ClosedHandCursor)
+        self._panning = True
+        self._press_disp = (event.x, event.y)
+        self._press_xlim = self.axes.get_xlim()
+        self._press_ylim = self.axes.get_ylim()
+        self._inv_trans = self.axes.transData.inverted()
+
+    def _handle_add_point_press(self, event):
+        # 在数据区域点击添加点
+        if event.xdata is not None and event.ydata is not None:
+            self.axes.plot(event.xdata, event.ydata, marker='o', color='red')
+            self.draw_idle()
+            print("after draw idel, added point at data coords ({}, {})".format(event.xdata, event.ydata))
+
+    def _handle_default_press(self, event):
         # 默认模式：检测标题、线条点击
         # print("canves", type(event.canvas))
         # 先检测标题和 X 轴标签点击
@@ -155,6 +181,33 @@ class MatplotCanvas(FigureCanvas):
         # 点击到线则高亮并不进入平移
         if self.highlight_line_if_clicked(event):
             return
+
+    def _handle_brush_press(self, event):
+        # brush 模式：开始笔刷选择
+        if event.xdata is None or event.ydata is None:
+            return
+        self._brushing = True
+        self._brush_points = []
+        if self._brush_scatter is not None:
+            try:
+                self._brush_scatter.remove()
+            except Exception:
+                pass
+            self._brush_scatter = None
+        self._brush_scatter = self.axes.scatter(
+            [], [], s=self._brush_size, c='#4caf50', alpha=0.25,
+            edgecolors='none', zorder=5
+        )
+        self._brush_last_disp = (event.x, event.y)
+        self._add_brush_point(event)
+        self.draw_idle()
+
+    def _add_brush_point(self, event):
+        if event.xdata is None or event.ydata is None:
+            return
+        self._brush_points.append((event.xdata, event.ydata))
+        if self._brush_scatter is not None:
+            self._brush_scatter.set_offsets(self._brush_points)
 
     def _on_motion(self, event):
         # zoom 模式：更新矩形框
@@ -191,6 +244,24 @@ class MatplotCanvas(FigureCanvas):
             self.axes.set_xlim(xl0 - dx, xl1 - dx)
             self.axes.set_ylim(yl0 - dy, yl1 - dy)
             self.draw_idle()
+            return
+
+        # brush 模式：笔刷涂抹
+        if self._brushing:
+            if event.xdata is None or event.ydata is None:
+                return
+            if self._brush_last_disp is None:
+                self._brush_last_disp = (event.x, event.y)
+                self._add_brush_point(event)
+                self.draw_idle()
+                return
+            x0_disp, y0_disp = self._brush_last_disp
+            dx = event.x - x0_disp
+            dy = event.y - y0_disp
+            if (dx * dx + dy * dy) >= (self._brush_spacing * self._brush_spacing):
+                self._brush_last_disp = (event.x, event.y)
+                self._add_brush_point(event)
+                self.draw_idle()
 
     def _on_release(self, event):
         if event.button != 1:
@@ -227,6 +298,11 @@ class MatplotCanvas(FigureCanvas):
             self._press_disp = None
             self._press_xlim = None
             self._press_ylim = None
+
+        # brush 模式：结束笔刷（保留涂抹结果）
+        if self._brushing:
+            self._brushing = False
+            self._brush_last_disp = None
 
     def _on_scroll(self, event):
         # 仅在当前坐标轴内滚动才缩放
