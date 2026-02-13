@@ -17,7 +17,8 @@ from model.matplot_model import MatplotModel
 from model.tree_model import TreeModel
 # from model.matplot_node import MatplotNode
 from model.table_model import TableModel
-from view.main_window import MainWindow
+# from view.main_window import MainWindow
+from view.de_window import DataExtractionWindow
 from data_extraction.deta_extraction_node import DataExtractionRootNode, DataExtractionNode
 
 
@@ -30,15 +31,11 @@ def predefined_matplot_node():
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     # app.setStyle("Fusion")
-    screen = app.primaryScreen()
 
-    print(f"屏幕名称: {screen.name()}")
-    print(f"逻辑 DPI: {screen.logicalDotsPerInch()}") # 系统缩放后的 DPI (常用)
-    print(f"物理 DPI: {screen.physicalDotsPerInch()}") # 硬件真实的 DPI
-    print(f"设备像素比 (DPR): {screen.devicePixelRatio()}") # 缩放倍数，如 1.25, 2.0
+    
     # window = TreePropertyWindow(MatplotModel())
     mnode = predefined_matplot_node() 
-    window = MainWindow(mnode)
+    window = DataExtractionWindow(mnode)
     window.show()
     # window.main_node.new_figure("Figure 1")
     sys.exit(app.exec())

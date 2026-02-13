@@ -15,7 +15,7 @@ class InputImageNode(TreeNodeGroup):
 
         # self._build_preview_figure("Preview")
         matfig = predefined_matfig.blank_fig_with_dashed_grid()
-        fig_node = FigureNode("Preview", matfig)
+        fig_node = FigureNode("Preview")
         self.addChild(fig_node)
 
     

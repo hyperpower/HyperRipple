@@ -1,29 +1,18 @@
-import sys
 from PySide6.QtWidgets import (
-    QApplication, QMainWindow, QListView, QVBoxLayout, QWidget, QTreeView,
-    QPushButton, QHBoxLayout, QStyledItemDelegate, QProgressBar, QStyle,
-    QLabel, QSplitter, QTabWidget, QProxyStyle, QDockWidget, QToolBar
+    QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
+    QLabel, QPushButton, QSplitter, QDockWidget, QToolBar
 )
-from PySide6.QtCore import Qt, QAbstractListModel, QModelIndex, QSize, Signal
-from PySide6.QtGui import QFont, QColor, QBrush, QPainter, QTextOption
-from view.tab_panel import TabPanel
+from PySide6.QtCore import Qt
+
+from model.tree_model import TreeModel
+from model.table_model import TableModel
 from view.tree_panel import TreePanel
 from view.property_panel import PropertyPanel
+from view.fig_panel import FigPanel
 from view.matplot_canvas import MatplotCanvas
-from model.table_model import TableModel
-from model.tree_model import TreeModel
-# from controller.property_controller import PropertyController
-from controller.main_controller import MainWindowController
 
 
-class LeftAlignedTabStyle(QProxyStyle):
-    def styleHint(self, hint, option=None, widget=None, returnData=None):
-        if hint == QStyle.SH_TabBar_Alignment:
-            return Qt.AlignLeft
-        return super().styleHint(hint, option, widget, returnData)
-
-
-class MainWindow(QMainWindow):
+class DataExtractionWindow(QMainWindow):
     def __init__(self, node=None, parent=None):
         super().__init__()
         # self.canvas = MatplotCanvas(self, width=5, height=4, dpi=100)
@@ -31,7 +20,7 @@ class MainWindow(QMainWindow):
         self.main_node = node
         self._init_window(node)
 
-        self.controller = MainWindowController(self)
+        # self.controller = MainWindowController(self)
 
         
 
@@ -72,11 +61,11 @@ class MainWindow(QMainWindow):
         left_splitter.addWidget(self.property_panel)
         left_splitter.setSizes([300, 250])
 
-
-        self.tab_panel = TabPanel()
+        self.canvas = MatplotCanvas(None)
+        self.fig_panel = FigPanel(self.canvas)
         
         splitter = QSplitter()
-        splitter.addWidget(self.tab_panel)
+        splitter.addWidget(self.fig_panel)
         splitter.setSizes([250, 750])
         hlayout.addWidget(splitter)
 
@@ -94,4 +83,3 @@ class MainWindow(QMainWindow):
         tree_toggle_action = self.tree_dock.toggleViewAction()
         tree_toggle_action.setText("树面板")
         self.left_toolbar.addAction(tree_toggle_action)
-

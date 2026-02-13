@@ -2,11 +2,13 @@ from PySide6.QtCore import Qt
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas, NavigationToolbar2QT as NavigationToolbar
 from matplotlib.backend_bases import MouseEvent
+from matplotlib.patches import Rectangle
 
 
 class MatplotCanvas(FigureCanvas):
     def __init__(self, node, matfig = None):
         self._figure_node = node
+        self._mode = None
         if matfig is not None:
             self.fig = matfig
         else:
@@ -17,7 +19,11 @@ class MatplotCanvas(FigureCanvas):
         super(MatplotCanvas, self).__init__(self.fig)
         
         
-        # 平移相关状态
+        # zoom 
+        self._zooming = False
+        self._zoom_start = None
+        self._zoom_rect = None  # 用于显示缩放区域的矩形补丁
+        # pan
         self._panning = False
         self._press_disp = None      # 按下时的显示坐标 (event.x, event.y)
         self._press_xlim = None
@@ -36,6 +42,10 @@ class MatplotCanvas(FigureCanvas):
         # 选中线的状态
         self._selected_line = None
         self._selected_line_prev_color = None
+    
+    def set_mode(self, mode: str | None):
+        """设置当前交互模式：'pan' 或 None。"""
+        self._mode = mode
     
     def _render_figure_from_node(self, node):
         """根据 FigureNode 的属性渲染图形内容。"""
@@ -109,53 +119,114 @@ class MatplotCanvas(FigureCanvas):
         return False
 
     def _on_press(self, event):
+        # 仅左键且在数据区域内
+        if event.button != 1 or event.inaxes is None or event.inaxes is not self.axes:
+            return
+        
+        # zoom 模式：记录起点
+        if self._mode == 'zoom':
+            self._zooming = True
+            self._zoom_start = (event.xdata, event.ydata)
+            # 创建虚线矩形
+            self._zoom_rect = Rectangle(
+                (event.xdata, event.ydata), 0, 0,
+                linewidth=1, edgecolor='red', facecolor='none',
+                linestyle='--'
+            )
+            self.axes.add_patch(self._zoom_rect)
+            self.draw_idle()
+            return
+        
+        # pan 模式：启动平移
+        if self._mode == 'pan':
+            self.setCursor(Qt.ClosedHandCursor)
+            self._panning = True
+            self._press_disp = (event.x, event.y)
+            self._press_xlim = self.axes.get_xlim()
+            self._press_ylim = self.axes.get_ylim()
+            self._inv_trans = self.axes.transData.inverted()
+            return
+        
+        # 默认模式：检测标题、线条点击
+        # print("canves", type(event.canvas))
         # 先检测标题和 X 轴标签点击
         if self.highlight_title_if_clicked(event):
             return
         # 点击到线则高亮并不进入平移
         if self.highlight_line_if_clicked(event):
             return
-        # 仅当在数据区域内按下左键时启动平移
-        if event.button != 1 or event.inaxes is None or event.inaxes is not self.axes:
-            return
-        self._panning = True
-        self._press_disp = (event.x, event.y)
-        self._press_xlim = self.axes.get_xlim()
-        self._press_ylim = self.axes.get_ylim()
-        self._inv_trans = self.axes.transData.inverted()
 
     def _on_motion(self, event):
-        if not self._panning or self._press_disp is None:
+        # zoom 模式：更新矩形框
+        if self._zooming and self._zoom_start is not None:
+            if event.xdata is None or event.ydata is None:
+                return
+            x0, y0 = self._zoom_start
+            width = event.xdata - x0
+            height = event.ydata - y0
+            self._zoom_rect.set_width(width)
+            self._zoom_rect.set_height(height)
+            self.draw_idle()
             return
-        # 即使移出数据区（event.inaxes 为 None），也基于显示坐标计算
-        if self.cursor().shape() != Qt.ClosedHandCursor:
-            self.setCursor(Qt.SizeAllCursor)
-        x0_disp, y0_disp = self._press_disp
-        x1_disp, y1_disp = event.x, event.y
+        
+        # pan 模式：平移坐标轴
+        if self._panning and self._press_disp is not None:
+            # 即使移出数据区（event.inaxes 为 None），也基于显示坐标计算
+            if self.cursor().shape() != Qt.ClosedHandCursor:
+                self.setCursor(Qt.SizeAllCursor)
+            x0_disp, y0_disp = self._press_disp
+            x1_disp, y1_disp = event.x, event.y
 
-        # 显示坐标 -> 数据坐标（支持线性/对数坐标）
-        x0_data, y0_data = self._inv_trans.transform((x0_disp, y0_disp))
-        x1_data, y1_data = self._inv_trans.transform((x1_disp, y1_disp))
+            # 显示坐标 -> 数据坐标（支持线性/对数坐标）
+            x0_data, y0_data = self._inv_trans.transform((x0_disp, y0_disp))
+            x1_data, y1_data = self._inv_trans.transform((x1_disp, y1_disp))
 
-        dx = x1_data - x0_data
-        dy = y1_data - y0_data
+            dx = x1_data - x0_data
+            dy = y1_data - y0_data
 
-        xl0, xl1 = self._press_xlim
-        yl0, yl1 = self._press_ylim
+            xl0, xl1 = self._press_xlim
+            yl0, yl1 = self._press_ylim
 
-        # 平移：坐标轴范围与鼠标移动方向相反
-        self.axes.set_xlim(xl0 - dx, xl1 - dx)
-        self.axes.set_ylim(yl0 - dy, yl1 - dy)
-        self.draw_idle()
+            # 平移：坐标轴范围与鼠标移动方向相反
+            self.axes.set_xlim(xl0 - dx, xl1 - dx)
+            self.axes.set_ylim(yl0 - dy, yl1 - dy)
+            self.draw_idle()
 
     def _on_release(self, event):
         if event.button != 1:
             return
-        self.unsetCursor()  # 还原默认光标
-        self._panning = False
-        self._press_disp = None
-        self._press_xlim = None
-        self._press_ylim = None
+        
+        # zoom 模式：根据框范围缩放
+        if self._zooming:
+            self._zooming = False
+            if self._zoom_rect is not None:
+                self._zoom_rect.remove()
+                self._zoom_rect = None
+            
+            if self._zoom_start is not None and event.xdata is not None and event.ydata is not None:
+                x0, y0 = self._zoom_start
+                x1, y1 = event.xdata, event.ydata
+                # 确保左下到右上
+                xmin, xmax = min(x0, x1), max(x0, x1)
+                ymin, ymax = min(y0, y1), max(y0, y1)
+                # 避免缩放范围过小
+                if abs(xmax - xmin) > 1e-6 and abs(ymax - ymin) > 1e-6:
+                    self.axes.set_xlim(xmin, xmax)
+                    self.axes.set_ylim(ymin, ymax)
+                    self.draw_idle()
+            self._zoom_start = None
+            return
+        
+        # pan 模式：结束平移
+        if self._panning:
+            if self._mode == 'pan':
+                self.setCursor(Qt.OpenHandCursor)
+            else:
+                self.unsetCursor()  # 还原默认光标
+            self._panning = False
+            self._press_disp = None
+            self._press_xlim = None
+            self._press_ylim = None
 
     def _on_scroll(self, event):
         # 仅在当前坐标轴内滚动才缩放
