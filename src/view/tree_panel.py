@@ -2,6 +2,7 @@ from PySide6.QtWidgets import QWidget, QVBoxLayout, QTreeView, QMenu
 from PySide6.QtCore import Signal, Qt, Slot
 
 from controller.tree_controller import TreePanelController
+from view.view_helper import *
 
 class TreePanel(QWidget):
     nodeSelected = Signal(object)  # 发出选中的节点对象
@@ -47,17 +48,20 @@ class TreePanel(QWidget):
     
     def _build_context_menu(self, index):
         menu = QMenu(self.tree_view)
+        empty_icon = createEmptyIcon()
+        icon_expand = createThemedIcon("asset/icons/list_down.svg")
+        icon_collapse = createThemedIcon("asset/icons/list_up.svg")
 
         if not index.isValid():
-            menu.addAction("Expand All", self.tree_view.expandAll)
-            menu.addAction("Collapse All", self.tree_view.collapseAll)
+            menu.addAction(icon_expand, "Expand All", self.tree_view.expandAll)
+            menu.addAction(icon_collapse, "Collapse All", self.tree_view.collapseAll)
         else: # valid index
             self.requestBuildContextMenu.emit(menu, index)
             menu.addSeparator()
-            menu.addAction("Expand", lambda: self.tree_view.expand(index))
-            menu.addAction("Expand All", self.tree_view.expandAll)
-            menu.addAction("Collapse", lambda: self.tree_view.collapse(index)) 
-            menu.addAction("Collapse All", self.tree_view.collapseAll)
+            menu.addAction(icon_expand, "Expand", lambda: self.tree_view.expand(index))
+            menu.addAction(empty_icon, "Expand All", self.tree_view.expandAll)
+            menu.addAction(icon_collapse, "Collapse", lambda: self.tree_view.collapse(index)) 
+            menu.addAction(empty_icon, "Collapse All", self.tree_view.collapseAll)
             menu.addSeparator()
         return menu
 
@@ -68,11 +72,9 @@ class TreePanel(QWidget):
         node = index.internalPointer() if hasattr(index, "internalPointer") else None
         if node and hasattr(node, "openRequested"):
             # 如果节点有 openRequested 信号，直接发出
-            print(f"TreePanel: double clicked node {node.name} has openRequested signal.")
             node.openRequested.emit(node)
         else:
             # 否则发出自定义信号，由 controller 处理
-            print(f"TreePanel: double clicked node {node.name} without openRequested signal.")
             self.nodeDoubleClicked.emit(node)
 
 class TreeWindow(QWidget):

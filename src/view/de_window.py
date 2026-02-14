@@ -3,10 +3,11 @@ import os
 import matplotlib.image as mpimg
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QLabel, QPushButton, QSplitter, QDockWidget, QToolBar
+    QLabel, QPushButton, QSplitter, QDockWidget, QToolBar, QFileDialog
 )
 from PySide6.QtCore import Qt
 
+from controller.de_window_controller import DEMainWindowController
 from model.tree_model import TreeModel
 from model.table_model import TableModel
 from view.tree_panel import TreePanel
@@ -26,9 +27,13 @@ class DataExtractionWindow(QMainWindow):
         self._init_window(node)
 
         # for test
-        self._load_test_fig("coordinate_example.png")
+        # self._load_test_fig("coordinate_example.png")
+        
+        self.zoom_widget._toggle_dropdown()  # 默认展开放大镜工具
+        # self.manual_extraction_widget.setCollapsed(False)  # 默认展开手动提取工具
+        self.manual_extraction_widget._toggle_dropdown()  # 默认展开手动提取工具
 
-        # self.controller = MainWindowController(self)
+        self.controller = DEMainWindowController(self, self.main_node)
 
         
 
@@ -53,13 +58,9 @@ class DataExtractionWindow(QMainWindow):
         label = QLabel("状态栏")
         self.statusBar().addWidget(label)
 
-        # form_btn = QPushButton("打开表单窗口")
-        # form_btn.clicked.connect(self.show_form)
-        # layout.addWidget(form_btn)
 
         tree_model = TreeModel(node)
         self.tree_panel = TreePanel(tree_model)
-        # node = self.tree_panel.getItem(QModelIndex())
         table_model = TableModel(node)
         self.property_panel = PropertyPanel(table_model)
 
@@ -68,18 +69,21 @@ class DataExtractionWindow(QMainWindow):
         left_splitter.addWidget(self.tree_panel)
         left_splitter.addWidget(self.property_panel)
         left_splitter.setSizes([300, 250])
+        left_splitter.setContentsMargins(0, 0, 0, 0)
 
-        self.canvas = MatplotCanvas(None)
+        self.canvas = MatplotCanvas(None, node._main_fig)
         self.fig_panel = FigPanel(self.canvas)
 
         self.zoom_widget = ZoomWidget(self.canvas)
         self.zoom_canvas = self.zoom_widget.zoom_canvas
 
         self.manual_extraction_widget = ManualExtractionWidget()
+        # self.manual_extraction_widget._build_content_widget()
 
         splitter = QSplitter()
         splitter.addWidget(self.fig_panel)
         splitter.setSizes([250, 750])
+        splitter.setContentsMargins(0, 0, 0, 0)
         hlayout.addWidget(splitter)
 
         # 创建 tree_panel 的 dock
@@ -101,7 +105,6 @@ class DataExtractionWindow(QMainWindow):
         self.right_dock.setFeatures(QDockWidget.NoDockWidgetFeatures)
         self.addDockWidget(Qt.RightDockWidgetArea, self.right_dock)
 
-
         # 左侧竖向工具栏
         self.left_toolbar = QToolBar("工具栏", self)
         self.left_toolbar.setOrientation(Qt.Vertical)
@@ -110,8 +113,34 @@ class DataExtractionWindow(QMainWindow):
         tree_toggle_action = self.tree_dock.toggleViewAction()
         tree_toggle_action.setText("树面板")
         self.left_toolbar.addAction(tree_toggle_action)
-
     
+    def on_load_image_requested(self, node):
+        # print(f"DataExtractionWindow: Received load image request from node {node.name}.")
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "选择图片文件",
+            "",
+            "Image Files (*.png *.jpg *.jpeg *.bmp *.gif *.tif *.tiff *.webp);;All Files (*)"
+        )
+        if not file_path:
+            return None
+        if node.get_class_name() != "InputImageNode":
+            return None
+        node["path"].value = file_path  # Update the node's path property
+        imge, width, height = self.load_image_from_path(file_path)
+        node["image_width"].value = width
+        node["image_height"].value = height
+    
+    def load_image_from_path(self, file_path):
+        if not file_path:
+            return None
+        image = mpimg.imread(file_path)
+        height, width = image.shape[:2]
+        self.canvas.main_ax.clear()
+        self.canvas.main_ax.imshow(image)
+        self.canvas.draw_idle()
+        return image, width, height
+
     def _load_test_fig(self, fn):
         fig = self.canvas.figure
         fig.clear()
@@ -123,9 +152,6 @@ class DataExtractionWindow(QMainWindow):
 
         self.canvas.axes = fig.add_subplot(111)
         self.canvas.axes.imshow(image)
-        # self.canvas.axes.set_xlim(0, width)
-        # self.canvas.axes.set_ylim(height, 0)
-        # ax.set_axis_off()
         fig.tight_layout(pad=0)
         self.canvas.draw_idle()
 

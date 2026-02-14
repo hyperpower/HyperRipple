@@ -23,9 +23,9 @@ class ZoomWidget(DropDownWidget):
 
         self.setContentBuilder(self._build_content_widget)
         self.setMinimumWidth(220)
-        self.setCollapsed(False)
 
     def _build_content_widget(self):
+        print("Building Zoom Content Widget")
         content_widget = QWidget()
         content_layout = QVBoxLayout(content_widget)
         self.zoom_canvas = MatplotCanvas(None)
@@ -44,7 +44,7 @@ class ZoomWidget(DropDownWidget):
         content_layout.addLayout(controls)
         content_layout.setContentsMargins(0, 0, 0, 0)
         content_layout.setSpacing(0)
-        if self.source_canvas is not None and self.source_canvas.axes is not None:
+        if self.source_canvas is not None and self.source_canvas.main_ax is not None:
             self._sync_zoom_from_source_axes()
         return content_widget
 
@@ -73,7 +73,7 @@ class ZoomWidget(DropDownWidget):
         self._apply_zoom_to_center()
 
     def _apply_zoom_to_center(self):
-        if self._data_bounds is None or self.zoom_canvas is None or self.zoom_canvas.axes is None:
+        if self._data_bounds is None or self.zoom_canvas is None or self.zoom_canvas.main_ax is None:
             return
 
         xmin, xmax, ymin, ymax = self._data_bounds
@@ -95,10 +95,10 @@ class ZoomWidget(DropDownWidget):
 
         x0, x1 = cx - half_w, cx + half_w
         y0, y1 = cy - half_h, cy + half_h
-        xlim = self.source_canvas.axes.get_xlim()
-        ylim = self.source_canvas.axes.get_ylim()
-        self.zoom_canvas.axes.set_xlim(x0, x1) if xlim[0] < xlim[1] else self.zoom_canvas.axes.set_xlim(x1, x0)
-        self.zoom_canvas.axes.set_ylim(y0, y1) if ylim[0] < ylim[1] else self.zoom_canvas.axes.set_ylim(y1, y0)
+        xlim = self.source_canvas.main_ax.get_xlim()
+        ylim = self.source_canvas.main_ax.get_ylim()
+        self.zoom_canvas.main_ax.set_xlim(x0, x1) if xlim[0] < xlim[1] else self.zoom_canvas.main_ax.set_xlim(x1, x0)
+        self.zoom_canvas.main_ax.set_ylim(y0, y1) if ylim[0] < ylim[1] else self.zoom_canvas.main_ax.set_ylim(y1, y0)
         self.zoom_canvas.draw_idle()
 
     def _on_source_draw(self, event):
@@ -111,19 +111,19 @@ class ZoomWidget(DropDownWidget):
             return
         prev_xlim = None
         prev_ylim = None
-        if self.zoom_canvas.axes is not None:
-            prev_xlim = self.zoom_canvas.axes.get_xlim()
-            prev_ylim = self.zoom_canvas.axes.get_ylim()
+        if self.zoom_canvas.main_ax is not None:
+            prev_xlim = self.zoom_canvas.main_ax.get_xlim()
+            prev_ylim = self.zoom_canvas.main_ax.get_ylim()
 
-        src_ax = self.source_canvas.axes
+        src_ax = self.source_canvas.main_ax
         if src_ax is None:
             return
 
         zoom_fig = self.zoom_canvas.figure
-        if self.zoom_canvas.axes is None:
-            self.zoom_canvas.axes = zoom_fig.add_subplot(111)
+        if self.zoom_canvas.main_ax is None:
+            self.zoom_canvas.main_ax = zoom_fig.add_subplot(111)
 
-        ax = self.zoom_canvas.axes
+        ax = self.zoom_canvas.main_ax
         ax.clear()
         ax.set_facecolor(src_ax.get_facecolor())
 
@@ -201,11 +201,11 @@ class ZoomWidget(DropDownWidget):
         self.zoom_canvas.draw_idle()
 
     def _on_source_motion(self, event):
-        if event.inaxes is None or event.inaxes is not self.source_canvas.axes:
+        if event.inaxes is None or event.inaxes is not self.source_canvas.main_ax:
             return
         if event.xdata is None or event.ydata is None:
             return
-        if self._data_bounds is None or self.zoom_canvas is None or self.zoom_canvas.axes is None:
+        if self._data_bounds is None or self.zoom_canvas is None or self.zoom_canvas.main_ax is None:
             return
 
         xmin, xmax, ymin, ymax = self._data_bounds
@@ -225,16 +225,16 @@ class ZoomWidget(DropDownWidget):
 
         x0, x1 = cx - half_w, cx + half_w
         y0, y1 = cy - half_h, cy + half_h
-        xlim = self.source_canvas.axes.get_xlim()
-        ylim = self.source_canvas.axes.get_ylim()
-        self.zoom_canvas.axes.set_xlim(x0, x1) if xlim[0] < xlim[1] else self.zoom_canvas.axes.set_xlim(x1, x0)
-        self.zoom_canvas.axes.set_ylim(y0, y1) if ylim[0] < ylim[1] else self.zoom_canvas.axes.set_ylim(y1, y0)
+        xlim = self.source_canvas.main_ax.get_xlim()
+        ylim = self.source_canvas.main_ax.get_ylim()
+        self.zoom_canvas.main_ax.set_xlim(x0, x1) if xlim[0] < xlim[1] else self.zoom_canvas.main_ax.set_xlim(x1, x0)
+        self.zoom_canvas.main_ax.set_ylim(y0, y1) if ylim[0] < ylim[1] else self.zoom_canvas.main_ax.set_ylim(y1, y0)
         self.zoom_canvas.draw_idle()
 
     def _on_source_scroll(self, event):
-        if event.inaxes is None or event.inaxes is not self.source_canvas.axes:
+        if event.inaxes is None or event.inaxes is not self.source_canvas.main_ax:
             return
-        if self._data_bounds is None or self.zoom_canvas is None or self.zoom_canvas.axes is None:
+        if self._data_bounds is None or self.zoom_canvas is None or self.zoom_canvas.main_ax is None:
             return
 
         xmin, xmax, ymin, ymax = self._data_bounds
@@ -266,8 +266,8 @@ class ZoomWidget(DropDownWidget):
 
         x0, x1 = cx - half_w, cx + half_w
         y0, y1 = cy - half_h, cy + half_h
-        xlim = self.source_canvas.axes.get_xlim()
-        ylim = self.source_canvas.axes.get_ylim()
-        self.zoom_canvas.axes.set_xlim(x0, x1) if xlim[0] < xlim[1] else self.zoom_canvas.axes.set_xlim(x1, x0)
-        self.zoom_canvas.axes.set_ylim(y0, y1) if ylim[0] < ylim[1] else self.zoom_canvas.axes.set_ylim(y1, y0)
+        xlim = self.source_canvas.main_ax.get_xlim()
+        ylim = self.source_canvas.main_ax.get_ylim()
+        self.zoom_canvas.main_ax.set_xlim(x0, x1) if xlim[0] < xlim[1] else self.zoom_canvas.main_ax.set_xlim(x1, x0)
+        self.zoom_canvas.main_ax.set_ylim(y0, y1) if ylim[0] < ylim[1] else self.zoom_canvas.main_ax.set_ylim(y1, y0)
         self.zoom_canvas.draw_idle()

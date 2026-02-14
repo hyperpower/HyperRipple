@@ -10,11 +10,13 @@ class MatplotCanvas(FigureCanvas):
         self._figure_node = node
         self._mode = None
         if matfig is not None:
+            print("Using provided Matplotlib figure for canvas.")
             self.fig = matfig
+            self.main_ax =  self.fig.axes[0]
         else:
-            self.fig = Figure()
-        self.axes = self.fig.add_subplot(111)
-        # self.axes.set_aspect("equal")
+            self.fig  = Figure()
+            self.main_ax = self.fig.add_subplot(111)
+        # self.main_ax.set_aspect("equal")
         # self.fig.subplots_adjust(left=0.1, right=0.9, bottom=0.12, top=0.92)
         super(MatplotCanvas, self).__init__(self.fig)
         
@@ -36,7 +38,8 @@ class MatplotCanvas(FigureCanvas):
         self._press_disp = None      # 按下时的显示坐标 (event.x, event.y)
         self._press_xlim = None
         self._press_ylim = None
-        self._inv_trans = self.axes.transData.inverted()
+        ax, = self.fig.axes if self.fig.axes else (None,)
+        self._inv_trans = ax.transData.inverted() if ax is not None else None
 
         # 标题高亮状态
         self._title_highlighted = False
@@ -57,32 +60,32 @@ class MatplotCanvas(FigureCanvas):
     
     def _render_figure_from_node(self, node):
         """根据 FigureNode 的属性渲染图形内容。"""
-        self.axes.clear()
+        self.main_ax.clear()
         # self.fig.set_figwidth(node["width"].value)
         # self.fig.set_figheight(node["height"].value)
         # self.fig.set_dpi(50)
         self.fig.suptitle(node["title"].value)
 
         for ax in node.iter_by_class("AxesNode"):
-            self.axes.set_xlabel(ax["xlabel"].value)
-            self.axes.set_ylabel(ax["ylabel"].value)
-            self.axes.set_title(ax["title"].value)
+            self.main_ax.set_xlabel(ax["xlabel"].value)
+            self.main_ax.set_ylabel(ax["ylabel"].value)
+            self.main_ax.set_title(ax["title"].value)
             for data_node in ax.iter_by_class("DataNode"):
                 x_data = data_node["x"].value
                 y_data = data_node["y"].value
-                self.axes.plot(x_data, y_data, label=data_node["label"].value)
+                self.main_ax.plot(x_data, y_data, label=data_node["label"].value)
 
-        # self.axes.set_xlim(node["Axes"]["xlim_min"].value, node["Axes"]["xlim_max"].value)
-        # self.axes.set_ylim(node["Axes"]["ylim_min"].value, node["Axes"]["ylim_max"].value)
+        # self.main_ax.set_xlim(node["Axes"]["xlim_min"].value, node["Axes"]["xlim_max"].value)
+        # self.main_ax.set_ylim(node["Axes"]["ylim_min"].value, node["Axes"]["ylim_max"].value)
         # Get data from DataNode children
-        self.axes.grid(True)
+        self.main_ax.grid(True)
 
 
     def highlight_title_if_clicked(self, event) -> bool:
         """
         判断是否点击了标题；若点击，则显示/切换标题边框并返回 True，否则返回 False。
         """
-        title_obj = self.axes.title  # Text 对象
+        title_obj = self.main_ax.title  # Text 对象
         if title_obj is None:
             return False
         try:
@@ -107,9 +110,9 @@ class MatplotCanvas(FigureCanvas):
         若在数据区域点击到了某条线，则将其颜色改为橙色并返回 True；否则返回 False。
         会自动还原上一次被高亮的线的原始颜色。
         """
-        if event.inaxes is None or event.inaxes is not self.axes:
+        if event.inaxes is None or event.inaxes is not self.main_ax:
             return False
-        for line in self.axes.get_lines():
+        for line in self.main_ax.get_lines():
             hit, _ = line.contains(event)  # 使用 mpl 事件进行命中测试
             if hit:
                 # 还原之前高亮线的颜色
@@ -130,7 +133,7 @@ class MatplotCanvas(FigureCanvas):
         print(f"Mouse press at ({event.x}, {event.y}) in canvas coords, "              f"data coords ({event.xdata}, {event.ydata}), "
               f"inaxes: {event.inaxes}")
         # 仅左键且在数据区域内
-        if event.button != 1 or event.inaxes is None or event.inaxes is not self.axes:
+        if event.button != 1 or event.inaxes is None or event.inaxes is not self.main_ax:
             return
 
         if self._mode == 'zoom':
@@ -154,9 +157,9 @@ class MatplotCanvas(FigureCanvas):
             linewidth=1, edgecolor='red', facecolor='none',
             linestyle='--'
         )
-        self.axes.add_patch(self._zoom_rect)
+        self.main_ax.add_patch(self._zoom_rect)
         # 创建文字对象
-        self._zoom_text = self.axes.text(event.xdata, event.ydata, "Zoom", color='red',
+        self._zoom_text = self.main_ax.text(event.xdata, event.ydata, "Zoom", color='red',
                                         ha='center', va='center', fontsize=8, zorder=10, visible=True)
         self.draw_idle()
 
@@ -165,14 +168,14 @@ class MatplotCanvas(FigureCanvas):
         self.setCursor(Qt.ClosedHandCursor)
         self._panning = True
         self._press_disp = (event.x, event.y)
-        self._press_xlim = self.axes.get_xlim()
-        self._press_ylim = self.axes.get_ylim()
-        self._inv_trans = self.axes.transData.inverted()
+        self._press_xlim = self.main_ax.get_xlim()
+        self._press_ylim = self.main_ax.get_ylim()
+        self._inv_trans = self.main_ax.transData.inverted()
 
     def _handle_add_point_press(self, event):
         # 在数据区域点击添加点
         if event.xdata is not None and event.ydata is not None:
-            self.axes.plot(event.xdata, event.ydata, marker='o', color='red')
+            self.main_ax.plot(event.xdata, event.ydata, marker='o', color='red')
             self.draw_idle()
             print("after draw idel, added point at data coords ({}, {})".format(event.xdata, event.ydata))
 
@@ -198,7 +201,7 @@ class MatplotCanvas(FigureCanvas):
             except Exception:
                 pass
             self._brush_scatter = None
-        self._brush_scatter = self.axes.scatter(
+        self._brush_scatter = self.main_ax.scatter(
             [], [], s=self._brush_size, c='#4caf50', alpha=0.25,
             edgecolors='none', zorder=5
         )
@@ -215,12 +218,12 @@ class MatplotCanvas(FigureCanvas):
     
     def is_reverse_yaxis(self) -> bool:
         """判断当前坐标轴是否为反向 Y 轴（图像坐标系）。"""
-        ylim = self.axes.get_ylim()
+        ylim = self.main_ax.get_ylim()
         return ylim[0] > ylim[1]
     
     def is_reverse_xaxis(self) -> bool:
         """判断当前坐标轴是否为反向 X 轴。"""
-        xlim = self.axes.get_xlim()
+        xlim = self.main_ax.get_xlim()
         return xlim[0] > xlim[1]
 
     def _on_motion(self, event):
@@ -271,8 +274,8 @@ class MatplotCanvas(FigureCanvas):
             yl0, yl1 = self._press_ylim
 
             # 平移：坐标轴范围与鼠标移动方向相反
-            self.axes.set_xlim(xl0 - dx, xl1 - dx)
-            self.axes.set_ylim(yl0 - dy, yl1 - dy)
+            self.main_ax.set_xlim(xl0 - dx, xl1 - dx)
+            self.main_ax.set_ylim(yl0 - dy, yl1 - dy)
             self.draw_idle()
 
     def _handle_brush_motion(self, event):
@@ -305,9 +308,9 @@ class MatplotCanvas(FigureCanvas):
     def __abs_fraction_on_axis(self, v0, v1, axis = "x") -> float:
         """计算 v0 到 v1 在指定轴（x 或 y）上的绝对比例（0 到 1）。"""
         if axis == "x":
-            ax_min, ax_max = self.axes.get_xlim()
+            ax_min, ax_max = self.main_ax.get_xlim()
         else:
-            ax_min, ax_max = self.axes.get_ylim()
+            ax_min, ax_max = self.main_ax.get_ylim()
         if ax_max == ax_min:
             return 0.0
         return abs(v1 - v0) / abs(ax_max - ax_min)
@@ -340,8 +343,8 @@ class MatplotCanvas(FigureCanvas):
                 x0, x1 = max(x0, x1), min(x0, x1)
             if self.is_reverse_yaxis():
                 y0, y1 = max(y0, y1), min(y0, y1)
-            self.axes.set_xlim(x0, x1)
-            self.axes.set_ylim(y0, y1)
+            self.main_ax.set_xlim(x0, x1)
+            self.main_ax.set_ylim(y0, y1)
             self.draw_idle()
         self._zoom_start = None
 
@@ -363,7 +366,7 @@ class MatplotCanvas(FigureCanvas):
 
     def _on_scroll(self, event):
         # 仅在当前坐标轴内滚动才缩放
-        if event.inaxes is None or event.inaxes is not self.axes:
+        if event.inaxes is None or event.inaxes is not self.main_ax:
             return
         xdata, ydata = event.xdata, event.ydata
         if xdata is None or ydata is None:
@@ -378,7 +381,7 @@ class MatplotCanvas(FigureCanvas):
         zoom_x = 'shift' not in key
         zoom_y = 'control' not in key and 'ctrl' not in key
 
-        ax = self.axes
+        ax = self.main_ax
         if zoom_x:
             xmin, xmax = ax.get_xlim()
             ax.set_xlim(

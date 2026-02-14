@@ -6,7 +6,6 @@ from view.dropdown_widget import DropDownWidget
 
 class ManualExtractionWidget(DropDownWidget):
     """手动提取widget，包含增加、调整、删除按钮"""
-    
     def __init__(self, parent=None):
         super().__init__("手动提取", parent)
         self.add_btn = None
@@ -14,9 +13,10 @@ class ManualExtractionWidget(DropDownWidget):
         self.delete_btn = None
         self.setContentBuilder(self._build_content_widget)
         self.setMinimumWidth(220)
-        self.setCollapsed(False)
+        
 
     def _build_content_widget(self):
+        print("Building Manual Extraction Content Widget")
         content_widget = QWidget()
         content_layout = QVBoxLayout(content_widget)
         

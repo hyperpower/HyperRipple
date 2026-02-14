@@ -1,5 +1,4 @@
 
-
 from PySide6.QtWidgets import QApplication
 from PySide6.QtCore import Qt, QByteArray
 from PySide6.QtGui import QPalette, QPixmap, QPainter, QIcon
@@ -33,4 +32,10 @@ def createThemedPixmap(svg_path, size=24, color=None):
 def createThemedIcon(svg_path, size=24, color=None):
     """创建适配主题的图标"""
     pixmap = createThemedPixmap(svg_path, size, color)
+    return QIcon(pixmap)
+
+def createEmptyIcon(size=24):
+    """创建一个透明的占位 QIcon，用于菜单项对齐。"""
+    pixmap = QPixmap(size, size)
+    pixmap.fill(Qt.transparent)
     return QIcon(pixmap)

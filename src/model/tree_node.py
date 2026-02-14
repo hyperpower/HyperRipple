@@ -163,7 +163,32 @@ class TreeNodeBase(QObject):
                 root_node.addChild(node)
             else:
                 raise ValueError(f"Unsupported property type for key '{key}': {type(value)}")
+            
+    def set_allowed_actions(self, actions: list):
+        self._allowed_actions = actions
+
+    # def allowed_actions(self):
+    #     # 返回 (icon_name, action_name, handler) 列表，子类可覆盖
+    #     actions = []
+    #     for item in getattr(self, "_allowed_actions", []):
+    #         # item 可以是 (icon_name, action_name, handler) 或 action_name 字符串
+    #         if isinstance(item, tuple) and len(item) == 3:
+    #             actions.append(item)
+    #         elif isinstance(item, str):
+    #             # 兼容旧用法，自动查找 handler
+    #             handler = getattr(self, self._action_name_to_func(item), None)
+    #             actions.append((None, item, handler))
+    #     return actions
+
+    # def _action_name_to_func(self, action_name):
+    #     # 默认将 action_name 转为函数名
+    #     return action_name.replace("...", "").strip().replace(" ", "_").lower()
     
+    def add_allowed_action(self, action_name, handler=None, icon_name=None):
+        if not hasattr(self, "_allowed_actions"):
+            self._allowed_actions = []
+        self._allowed_actions.append((icon_name, action_name, handler))
+
 
 
 class TreeNodeString(TreeNodeBase):
@@ -171,17 +196,26 @@ class TreeNodeString(TreeNodeBase):
         super().__init__(name, parent)
         # 使用字符串注册类型
         self.value = value
-        self.type = NTR.get("STRING") | NTR.get("OPENABLE")
+        self.type = NTR.get("STRING")
 
     def allowed_actions(self):
-        return []
+        return []  # 返回空列表，兼容三元组格式
 
 
 class TreeNodeNumber(TreeNodeBase):
     def __init__(self, name="", value=0, parent=None):
         super().__init__(name, parent)
         self.value = value
-        self.type = NTR.get("NUMBER") | NTR.get("OPENABLE")
+        self.type = NTR.get("NUMBER") 
+
+    def allowed_actions(self):
+        return []
+
+class TreeNodeBoolean(TreeNodeBase):
+    def __init__(self, name="", value=False, parent=None):
+        super().__init__(name, parent)
+        self.value = value
+        self.type = NTR.get("BOOLEAN") 
 
     def allowed_actions(self):
         return []
@@ -193,11 +227,10 @@ class TreeNodeArray(TreeNodeBase):
         
         if self.value is None:
             self.value = []
-        self.type = NTR.get("ARRAY") | NTR.get("OPENABLE")
+        self.type = NTR.get("ARRAY")
 
     def allowed_actions(self):
         return []
-
 
 
 class TreeNodeGroup(TreeNodeBase):
@@ -206,4 +239,4 @@ class TreeNodeGroup(TreeNodeBase):
         self.type = NTR.get("GROUP") | NTR.get("EXPANDABLE")
 
     def allowed_actions(self):
-        return ["rename", "delete"]
+        return []

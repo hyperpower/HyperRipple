@@ -78,7 +78,8 @@ class FigureNode(TreeNodeGroup):
         }
     
     def allowed_actions(self):
-        return ["Open"]
+        # 返回 (icon_name, action_id, handler)
+        return [("open.svg", "Open", self.open)]
     
     def open(self):
         self.openRequested.emit(self)  # Emit signal to request opening the figure
@@ -113,7 +114,7 @@ class MatplotNode(TreeNodeGroup):
         return fig_node
     
     def allowed_actions(self):
-        return ["New Figure"]  # No actions allowed on MatplotNode
+        return [("add.svg", "New Figure", self.new_figure)]
     
 class MatplotRootNode(TreeNodeGroup):
     def __init__(self, name="Matplot Root"):
