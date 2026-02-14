@@ -14,6 +14,7 @@ from view.property_panel import PropertyPanel
 from view.fig_panel import FigPanel
 from view.matplot_canvas import MatplotCanvas
 from view.zoom_widget import ZoomWidget
+from view.manual_extraction_widget import ManualExtractionWidget
 
 
 class DataExtractionWindow(QMainWindow):
@@ -74,6 +75,8 @@ class DataExtractionWindow(QMainWindow):
         self.zoom_widget = ZoomWidget(self.canvas)
         self.zoom_canvas = self.zoom_widget.zoom_canvas
 
+        self.manual_extraction_widget = ManualExtractionWidget()
+
         splitter = QSplitter()
         splitter.addWidget(self.fig_panel)
         splitter.setSizes([250, 750])
@@ -92,6 +95,7 @@ class DataExtractionWindow(QMainWindow):
         right_layout.setContentsMargins(0, 0, 0, 0)
         right_layout.setSpacing(0)
         right_layout.addWidget(self.zoom_widget)
+        right_layout.addWidget(self.manual_extraction_widget)
         right_layout.addStretch(1)
         self.right_dock.setWidget(right_container)
         self.right_dock.setFeatures(QDockWidget.NoDockWidgetFeatures)

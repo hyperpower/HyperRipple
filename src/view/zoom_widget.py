@@ -1,16 +1,15 @@
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QToolButton, QSizePolicy
-from PySide6.QtGui import QIcon
-from PySide6.QtCore import QSize, Qt
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QSizePolicy
+from PySide6.QtCore import QSize
 
 from view.matplot_canvas import MatplotCanvas
-from view.view_helper import createThemedIcon
+from view.dropdown_widget import DropDownWidget
 
-class ZoomWidget(QWidget):
+
+class ZoomWidget(DropDownWidget):
     def __init__(self, source_canvas, parent=None):
-        super().__init__(parent)
+        super().__init__("放大镜", parent)
         self.source_canvas = source_canvas
-        self.zoom_canvas = MatplotCanvas(None)
-        # self.zoom_canvas.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.zoom_canvas = None
         self._data_bounds = None
         self._default_zoom_window = (150, 150)
         self._zoom_window = self._default_zoom_window
@@ -22,23 +21,14 @@ class ZoomWidget(QWidget):
         self.source_canvas.mpl_connect('scroll_event', self._on_source_scroll)
         self.source_canvas.mpl_connect('draw_event', self._on_source_draw)
 
-        layout = QVBoxLayout(self)
+        self.setContentBuilder(self._build_content_widget)
+        self.setMinimumWidth(220)
+        self.setCollapsed(False)
 
-        self._zoom_toggle_btn = QToolButton(self)
-        self._zoom_toggle_btn.setText("放大镜")
-        self._zoom_toggle_btn.setArrowType(Qt.NoArrow)
-        _icon = createThemedIcon("asset/icons/down_circle.svg")
-        self._zoom_toggle_btn.setIcon(_icon)
-        self._zoom_toggle_btn.setIconSize(QSize(18, 18))
-        self._zoom_toggle_btn.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
-        self._zoom_toggle_btn.setAutoRaise(True)
-        self._zoom_toggle_btn.setFixedHeight(24)
-        self._zoom_toggle_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        self._zoom_toggle_btn.clicked.connect(self._toggle_zoom_widget)
-        layout.addWidget(self._zoom_toggle_btn)
-
-        self._content = QWidget(self)
-        content_layout = QVBoxLayout(self._content)
+    def _build_content_widget(self):
+        content_widget = QWidget()
+        content_layout = QVBoxLayout(content_widget)
+        self.zoom_canvas = MatplotCanvas(None)
         content_layout.addWidget(self.zoom_canvas)
 
         controls = QHBoxLayout()
@@ -54,26 +44,14 @@ class ZoomWidget(QWidget):
         content_layout.addLayout(controls)
         content_layout.setContentsMargins(0, 0, 0, 0)
         content_layout.setSpacing(0)
-        self._content.setLayout(content_layout)
-
-        layout.addWidget(self._content)
-        layout.addStretch(1)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
-        self.setLayout(layout)
-        self.setMinimumSize(220, 220)
+        if self.source_canvas is not None and self.source_canvas.axes is not None:
+            self._sync_zoom_from_source_axes()
+        return content_widget
 
     def sizeHint(self):
+        if self.isCollapsed():
+            return QSize(200, 24)
         return QSize(200, 200)
-
-    def _toggle_zoom_widget(self):
-        collapsed = self._content.isVisible()
-        self._content.setVisible(not collapsed)
-        if collapsed:
-            _icon = createThemedIcon("asset/icons/right_circle.svg")
-        else:
-            _icon = createThemedIcon("asset/icons/down_circle.svg")
-        self._zoom_toggle_btn.setIcon(_icon)
 
     def _on_zoom_reset(self):
         self._zoom_window = self._default_zoom_window
@@ -95,7 +73,7 @@ class ZoomWidget(QWidget):
         self._apply_zoom_to_center()
 
     def _apply_zoom_to_center(self):
-        if self._data_bounds is None or self.zoom_canvas.axes is None:
+        if self._data_bounds is None or self.zoom_canvas is None or self.zoom_canvas.axes is None:
             return
 
         xmin, xmax, ymin, ymax = self._data_bounds
@@ -108,8 +86,6 @@ class ZoomWidget(QWidget):
         win_w, win_h = self._zoom_window
         half_w = win_w / 2
         half_h = win_h / 2
-        cx = max(xmin + half_w, min(xmax - half_w, cx))
-        cy = max(ymin + half_h, min(ymax - half_h, cy))
         self._last_zoom_center = (cx, cy)
 
         if self._zoom_crosshair_v is not None:
@@ -131,6 +107,8 @@ class ZoomWidget(QWidget):
         self._sync_zoom_from_source_axes()
 
     def _sync_zoom_from_source_axes(self):
+        if self.zoom_canvas is None:
+            return
         prev_xlim = None
         prev_ylim = None
         if self.zoom_canvas.axes is not None:
@@ -154,7 +132,7 @@ class ZoomWidget(QWidget):
             ax.imshow(
                 img.get_array(),
                 extent=img.get_extent(),
-                origin="lower",
+                origin=img.origin,
                 cmap=img.get_cmap(),
                 interpolation=img.get_interpolation(),
                 vmin=vmin,
@@ -227,7 +205,7 @@ class ZoomWidget(QWidget):
             return
         if event.xdata is None or event.ydata is None:
             return
-        if self._data_bounds is None or self.zoom_canvas.axes is None:
+        if self._data_bounds is None or self.zoom_canvas is None or self.zoom_canvas.axes is None:
             return
 
         xmin, xmax, ymin, ymax = self._data_bounds
@@ -235,8 +213,8 @@ class ZoomWidget(QWidget):
         half_w = win_w / 2
         half_h = win_h / 2
 
-        cx = max(xmin + half_w, min(xmax - half_w, event.xdata))
-        cy = max(ymin + half_h, min(ymax - half_h, event.ydata))
+        cx = event.xdata
+        cy = event.ydata
 
         self._last_zoom_center = (cx, cy)
 
@@ -256,7 +234,7 @@ class ZoomWidget(QWidget):
     def _on_source_scroll(self, event):
         if event.inaxes is None or event.inaxes is not self.source_canvas.axes:
             return
-        if self._data_bounds is None or self.zoom_canvas.axes is None:
+        if self._data_bounds is None or self.zoom_canvas is None or self.zoom_canvas.axes is None:
             return
 
         xmin, xmax, ymin, ymax = self._data_bounds
@@ -279,8 +257,6 @@ class ZoomWidget(QWidget):
             cx, cy = self._last_zoom_center
         half_w = new_w / 2
         half_h = new_h / 2
-        cx = max(xmin + half_w, min(xmax - half_w, cx))
-        cy = max(ymin + half_h, min(ymax - half_h, cy))
         self._last_zoom_center = (cx, cy)
 
         if self._zoom_crosshair_v is not None:
