@@ -14,6 +14,7 @@ class ZoomWidget(DropDownWidget):
         self._default_zoom_window = (150, 150)
         self._zoom_window = self._default_zoom_window
         self._last_zoom_center = None
+
         self._zoom_crosshair_v = None
         self._zoom_crosshair_h = None
 
@@ -28,8 +29,11 @@ class ZoomWidget(DropDownWidget):
         print("Building Zoom Content Widget")
         content_widget = QWidget()
         content_layout = QVBoxLayout(content_widget)
-        self.zoom_canvas = MatplotCanvas(None)
-        content_layout.addWidget(self.zoom_canvas)
+        self.zoom_canvas = MatplotCanvas(None, figsize=(2, 2))
+        # 设置 QSizePolicy 为 Expanding，让 zoom_canvas 占据更多空间
+        self.zoom_canvas.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.zoom_canvas.setMinimumSize(200, 200)
+        content_layout.addWidget(self.zoom_canvas, stretch=1)
 
         controls = QHBoxLayout()
         reset_btn = QPushButton("恢复", self)
@@ -107,26 +111,56 @@ class ZoomWidget(DropDownWidget):
         self._sync_zoom_from_source_axes()
 
     def _sync_zoom_from_source_axes(self):
+        """同步主图坐标轴到缩放窗口。"""
         if self.zoom_canvas is None:
             return
-        prev_xlim = None
-        prev_ylim = None
-        if self.zoom_canvas.main_ax is not None:
-            prev_xlim = self.zoom_canvas.main_ax.get_xlim()
-            prev_ylim = self.zoom_canvas.main_ax.get_ylim()
-
+        
         src_ax = self.source_canvas.main_ax
         if src_ax is None:
             return
 
-        zoom_fig = self.zoom_canvas.figure
+        # 确保 zoom_canvas 有 axes
         if self.zoom_canvas.main_ax is None:
-            self.zoom_canvas.main_ax = zoom_fig.add_subplot(111)
+            self.zoom_canvas.main_ax = self.zoom_canvas.figure.add_subplot(111)
 
         ax = self.zoom_canvas.main_ax
+        
+        # 1. 清空并复制背景色
         ax.clear()
         ax.set_facecolor(src_ax.get_facecolor())
+        
+        # 2. 复制坐标轴内容（images, lines, collections）
+        self._copy_axis_content(src_ax, ax)
+        
+        # 3. 复制 grid 样式
+        self._copy_grid_style(src_ax, ax)
+        
+        # 4. 添加十字线
+        self._add_crosshair(ax)
+        
+        # 5. 保存数据边界
+        xlim = src_ax.get_xlim()
+        ylim = src_ax.get_ylim()
+        xmin, xmax = sorted(xlim)
+        ymin, ymax = sorted(ylim)
+        self._data_bounds = (xmin, xmax, ymin, ymax)
+        
+        # 6. 设置默认的 zoom 窗口为主图坐标范围的 1/3
+        x_range = abs(xmax - xmin)
+        y_range = abs(ymax - ymin)
+        self._default_zoom_window = (x_range / 3, y_range / 3)
+        
+        # 7. 初始化或更新 zoom 窗口
+        # 使用 self._last_zoom_center 判断是否是首次初始化
+        self._init_or_update_zoom_window(ax, xmin, xmax, ymin, ymax)
+        self.zoom_canvas.figure.tight_layout(pad=0.2)
 
+        
+        self.zoom_canvas.draw_idle()
+
+    def _copy_axis_content(self, src_ax, ax):
+        """复制坐标轴内容：images, lines, collections。"""
+        # 复制 images
         for img in src_ax.images:
             vmin, vmax = img.get_clim()
             ax.imshow(
@@ -139,6 +173,7 @@ class ZoomWidget(DropDownWidget):
                 vmax=vmax,
             )
 
+        # 复制 lines
         for line in src_ax.get_lines():
             ax.plot(
                 line.get_xdata(),
@@ -151,6 +186,7 @@ class ZoomWidget(DropDownWidget):
                 alpha=line.get_alpha(),
             )
 
+        # 复制 collections (scatter 等)
         for col in src_ax.collections:
             offsets = col.get_offsets()
             if offsets is None or len(offsets) == 0:
@@ -165,40 +201,78 @@ class ZoomWidget(DropDownWidget):
                 alpha=col.get_alpha(),
             )
 
-        ax.set_aspect(src_ax.get_aspect())
-        ax.set_axis_off()
-
-        self._zoom_crosshair_v = ax.axvline(
-            0, color="#ff5722", linewidth=1.0, linestyle='--', zorder=10
-        )
-        self._zoom_crosshair_h = ax.axhline(
-            0, color="#ff5722", linewidth=1.0, linestyle='--', zorder=10
-        )
-
+    def _copy_grid_style(self, src_ax, ax):
+        """复制 grid 状态和样式。"""
+        x_gridlines = src_ax.xaxis.get_gridlines()
+        y_gridlines = src_ax.yaxis.get_gridlines()
+        x_grid_on = len(x_gridlines) > 0 and x_gridlines[0].get_visible()
+        y_grid_on = len(y_gridlines) > 0 and y_gridlines[0].get_visible()
+        
         xlim = src_ax.get_xlim()
         ylim = src_ax.get_ylim()
+
+        if x_grid_on or y_grid_on:
+            if x_gridlines:
+                grid_line = x_gridlines[0]
+                grid_color = grid_line.get_color()
+                grid_linestyle = grid_line.get_linestyle()
+                grid_linewidth = grid_line.get_linewidth()
+                grid_alpha = grid_line.get_alpha()
+                
+                # 复制主图的 minor tick 状态
+                x_minorticks = src_ax.get_xticks(minor=True)
+                y_minorticks = src_ax.get_yticks(minor=True)
+                
+                # 设置 major ticks 和 minor ticks
+                ax.set_xticks(src_ax.get_xticks())
+                ax.set_yticks(src_ax.get_yticks())
+                ax.set_xticks(x_minorticks, minor=True)
+                ax.set_yticks(y_minorticks, minor=True)
+                
+                ax.grid(True, which='both', color=grid_color, linestyle=grid_linestyle, 
+                        linewidth=grid_linewidth, alpha=grid_alpha)
+        
+        # 在设置 ticks 之后再设置 xlim/ylim，防止被覆盖
         ax.set_xlim(xlim)
         ax.set_ylim(ylim)
+        ax.set_aspect(src_ax.get_aspect())
 
-        xmin, xmax = sorted(xlim)
-        ymin, ymax = sorted(ylim)
-        self._data_bounds = (xmin, xmax, ymin, ymax)
-
-        if prev_xlim is not None and prev_ylim is not None:
-            ax.set_xlim(prev_xlim)
-            ax.set_ylim(prev_ylim)
-            self._last_zoom_center = (
-                (prev_xlim[0] + prev_xlim[1]) / 2,
-                (prev_ylim[0] + prev_ylim[1]) / 2,
+    def _add_crosshair(self, ax):
+        """添加十字线。"""
+        try:
+            self._zoom_crosshair_v = ax.axvline(
+                0, color="#ff5722", linewidth=1.0, linestyle='--', zorder=10
             )
+            self._zoom_crosshair_h = ax.axhline(
+                0, color="#ff5722", linewidth=1.0, linestyle='--', zorder=10
+            )
+        except Exception:
+            self._zoom_crosshair_v = None
+            self._zoom_crosshair_h = None
+
+    def _init_or_update_zoom_window(self, ax, xmin, xmax, ymin, ymax):
+        """初始化或更新 zoom 窗口。"""
+        # 如果是首次初始化，设置居中显示
+        if self._last_zoom_center is None:
+            center_x = (xmin + xmax) / 2
+            center_y = (ymin + ymax) / 2
+            self._last_zoom_center = (center_x, center_y)
+            self._zoom_window = self._default_zoom_window
+            # 应用初始 zoom 设置
+            half_w = self._default_zoom_window[0] / 2
+            half_h = self._default_zoom_window[1] / 2
+            ax.set_xlim(center_x - half_w, center_x + half_w)
+            ax.set_ylim(center_y - half_h, center_y + half_h)
+        else:
+            # 保持之前的 zoom 窗口
             cx, cy = self._last_zoom_center
+            half_w, half_h = self._zoom_window[0] / 2, self._zoom_window[1] / 2
+            ax.set_xlim(cx - half_w, cx + half_w)
+            ax.set_ylim(cy - half_h, cy + half_h)
             if self._zoom_crosshair_v is not None:
                 self._zoom_crosshair_v.set_xdata([cx, cx])
             if self._zoom_crosshair_h is not None:
                 self._zoom_crosshair_h.set_ydata([cy, cy])
-
-        zoom_fig.tight_layout(pad=0)
-        self.zoom_canvas.draw_idle()
 
     def _on_source_motion(self, event):
         if event.inaxes is None or event.inaxes is not self.source_canvas.main_ax:

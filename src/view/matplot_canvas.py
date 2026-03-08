@@ -6,15 +6,17 @@ from matplotlib.patches import Rectangle
 
 
 class MatplotCanvas(FigureCanvas):
-    def __init__(self, node, matfig = None):
+    def __init__(self, node, matfig=None, figsize=None):
         self._figure_node = node
         self._mode = None
         if matfig is not None:
-            print("Using provided Matplotlib figure for canvas.")
             self.fig = matfig
             self.main_ax =  self.fig.axes[0]
         else:
-            self.fig  = Figure()
+            if figsize is not None:
+                self.fig = Figure(figsize=figsize)
+            else:
+                self.fig = Figure()
             self.main_ax = self.fig.add_subplot(111)
         # self.main_ax.set_aspect("equal")
         # self.fig.subplots_adjust(left=0.1, right=0.9, bottom=0.12, top=0.92)

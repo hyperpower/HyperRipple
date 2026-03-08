@@ -2,7 +2,7 @@ from matplotlib.figure import Figure
 
 
 def blank_fig_with_dashed_grid():
-    fig = Figure()
+    fig = Figure(figsize=(5, 4))
     ax = fig.add_subplot(111)
     ax.set_facecolor('none')  # 设置背景透明
     ax.set_aspect('equal')  # 保持宽高比
