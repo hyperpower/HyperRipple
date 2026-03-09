@@ -29,6 +29,8 @@ def predefined_matplot_node():
 
 
 if __name__ == "__main__":
+    print("Current working directory:", 
+          os.getcwd())
     app = QApplication(sys.argv)
     # app.setStyle("Fusion")
 
@@ -37,5 +39,6 @@ if __name__ == "__main__":
     mnode = predefined_matplot_node() 
     window = DataExtractionWindow(mnode)
     window.show()
+    window.load_image_from_path("asset/test/coordinate_example.png")
     # window.main_node.new_figure("Figure 1")
     sys.exit(app.exec())

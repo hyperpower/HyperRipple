@@ -84,7 +84,7 @@ class DataExtractionWindow(QMainWindow):
         splitter.addWidget(self.fig_panel)
         splitter.setSizes([250, 750])
         splitter.setContentsMargins(0, 0, 0, 0)
-        hlayout.addWidget(splitter)
+        hlayout.addWidget(splitter, stretch=1)
 
         # 创建 tree_panel 的 dock
         self.tree_dock = QDockWidget("数据面板", self)

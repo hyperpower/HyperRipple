@@ -11,7 +11,8 @@ class DEMainWindowController(QObject):
         #     self.main_window.main_node, self.main_window.tab_panel)
         # 监听tab切换信号
         # self.main_window.tab_panel.tabBar().tabBarClicked.connect(self.on_tab_clicked)
-        self.main_window.tree_panel.nodeSelected.connect(self.main_window.property_panel.setNode)
+        self.main_window.tree_panel.nodeSelected.connect(self.main_window.property_panel.set_node)
+        self.main_window.tree_panel.nodeSelected.connect(self.main_window.fig_panel.toolbar.set_node)
         # self.main_window.tree_panel.nodeSelected.connect(self.main_window.tab_panel.set_current_figure_tab_by_node)
 
         self.main_node["InputImage"].loadRequested.connect(self.main_window.on_load_image_requested)

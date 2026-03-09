@@ -8,7 +8,7 @@ class TableModel(QAbstractTableModel):
         if node is not None:
             self._update_leaf_children()
 
-    def setNode(self, node):
+    def set_node(self, node):
         self.beginResetModel()
         self.node = node
         self._update_leaf_children()

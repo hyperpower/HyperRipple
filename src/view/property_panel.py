@@ -29,5 +29,5 @@ class PropertyPanel(QWidget):
         layout.addWidget(self.view)
         self.setLayout(layout)
     
-    def setNode(self, node):
-        self.model.setNode(node)
+    def set_node(self, node):
+        self.model.set_node(node)

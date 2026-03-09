@@ -31,6 +31,9 @@ class TreePanel(QWidget):
 
         self.context_menu_controller = TreePanelController(self)
 
+        # 默认展开第一层级
+        self.tree_view.expandToDepth(1)
+
     def on_item_clicked(self, index):
         if not index.isValid():
             return
