@@ -152,7 +152,10 @@ class ZoomWidget(DropDownWidget):
         
         # 7. 初始化或更新 zoom 窗口
         # 使用 self._last_zoom_center 判断是否是首次初始化
-        self._init_or_update_zoom_window(ax, xmin, xmax, ymin, ymax)
+        if self._last_zoom_center is None:
+            self._init_zoom_window(ax, xmin, xmax, ymin, ymax, xlim, ylim)
+        else:
+            self._update_zoom_window(ax, xlim, ylim)
         self.zoom_canvas.figure.tight_layout(pad=0.2)
 
         
@@ -229,13 +232,17 @@ class ZoomWidget(DropDownWidget):
                 ax.set_xticks(x_minorticks, minor=True)
                 ax.set_yticks(y_minorticks, minor=True)
                 
-                ax.grid(True, which='both', color=grid_color, linestyle=grid_linestyle, 
+                ax.grid(True, which='both', 
+                        color=grid_color, linestyle=grid_linestyle, 
                         linewidth=grid_linewidth, alpha=grid_alpha)
         
         # 在设置 ticks 之后再设置 xlim/ylim，防止被覆盖
         ax.set_xlim(xlim)
         ax.set_ylim(ylim)
         ax.set_aspect(src_ax.get_aspect())
+        
+        # 隐藏坐标轴数字
+        ax.tick_params(labelbottom=False, labelleft=False)
 
     def _add_crosshair(self, ax):
         """添加十字线。"""
@@ -250,29 +257,28 @@ class ZoomWidget(DropDownWidget):
             self._zoom_crosshair_v = None
             self._zoom_crosshair_h = None
 
-    def _init_or_update_zoom_window(self, ax, xmin, xmax, ymin, ymax):
-        """初始化或更新 zoom 窗口。"""
-        # 如果是首次初始化，设置居中显示
-        if self._last_zoom_center is None:
-            center_x = (xmin + xmax) / 2
-            center_y = (ymin + ymax) / 2
-            self._last_zoom_center = (center_x, center_y)
-            self._zoom_window = self._default_zoom_window
-            # 应用初始 zoom 设置
-            half_w = self._default_zoom_window[0] / 2
-            half_h = self._default_zoom_window[1] / 2
-            ax.set_xlim(center_x - half_w, center_x + half_w)
-            ax.set_ylim(center_y - half_h, center_y + half_h)
-        else:
-            # 保持之前的 zoom 窗口
-            cx, cy = self._last_zoom_center
-            half_w, half_h = self._zoom_window[0] / 2, self._zoom_window[1] / 2
-            ax.set_xlim(cx - half_w, cx + half_w)
-            ax.set_ylim(cy - half_h, cy + half_h)
-            if self._zoom_crosshair_v is not None:
-                self._zoom_crosshair_v.set_xdata([cx, cx])
-            if self._zoom_crosshair_h is not None:
-                self._zoom_crosshair_h.set_ydata([cy, cy])
+    def _init_zoom_window(self, ax, xmin, xmax, ymin, ymax, xlim, ylim):
+        """初始化 zoom 窗口，居中显示。"""
+        center_x = (xmin + xmax) / 2
+        center_y = (ymin + ymax) / 2
+        self._last_zoom_center = (center_x, center_y)
+        self._zoom_window = self._default_zoom_window
+        # 应用初始 zoom 设置
+        half_w = self._default_zoom_window[0] / 2
+        half_h = self._default_zoom_window[1] / 2
+        ax.set_xlim(center_x - half_w, center_x + half_w) if xlim[0] < xlim[1] else ax.set_xlim(center_x + half_w, center_x - half_w)
+        ax.set_ylim(center_y - half_h, center_y + half_h) if ylim[0] < ylim[1] else ax.set_ylim(center_y + half_h, center_y - half_h)
+
+    def _update_zoom_window(self, ax, xlim, ylim):
+        """更新 zoom 窗口，保持之前的 zoom 窗口。"""
+        cx, cy = self._last_zoom_center
+        half_w, half_h = self._zoom_window[0] / 2, self._zoom_window[1] / 2
+        ax.set_xlim(cx - half_w, cx + half_w) if xlim[0] < xlim[1] else ax.set_xlim(cx + half_w, cx - half_w)
+        ax.set_ylim(cy - half_h, cy + half_h) if ylim[0] < ylim[1] else ax.set_ylim(cy + half_h, cy - half_h)
+        if self._zoom_crosshair_v is not None:
+            self._zoom_crosshair_v.set_xdata([cx, cx])
+        if self._zoom_crosshair_h is not None:
+            self._zoom_crosshair_h.set_ydata([cy, cy])
 
     def _on_source_motion(self, event):
         if event.inaxes is None or event.inaxes is not self.source_canvas.main_ax:
