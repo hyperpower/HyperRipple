@@ -16,5 +16,6 @@ class DEMainWindowController(QObject):
         # self.main_window.tree_panel.nodeSelected.connect(self.main_window.tab_panel.set_current_figure_tab_by_node)
 
         self.main_node["InputImage"].loadRequested.connect(self.main_window.on_load_image_requested)
+        # cropRequested 信号现在由 InputImageNode 内部处理，触发工具栏按钮
     
     

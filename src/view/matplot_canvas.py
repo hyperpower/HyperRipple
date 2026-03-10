@@ -2,7 +2,8 @@ from PySide6.QtCore import Qt
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas, NavigationToolbar2QT as NavigationToolbar
 from matplotlib.backend_bases import MouseEvent
-from matplotlib.patches import Rectangle
+from view.canvas_zoom_tool import CanvasZoomTool
+from view.canvas_crop_tool import CanvasCropTool
 
 
 class MatplotCanvas(FigureCanvas):
@@ -22,12 +23,12 @@ class MatplotCanvas(FigureCanvas):
         # self.fig.subplots_adjust(left=0.1, right=0.9, bottom=0.12, top=0.92)
         super(MatplotCanvas, self).__init__(self.fig)
         
+        # 初始化 Zoom 工具
+        self.zoom_tool = CanvasZoomTool(self)
+        # 初始化 Crop 工具
+        self.crop_tool = CanvasCropTool(self)
+        self.crop_tool.crop_completed.connect(self._on_crop_completed)
         
-        # zoom 
-        self._zooming = False
-        self._zoom_start = None
-        self._zoom_rect = None  # 用于显示缩放区域的矩形补丁
-        self._zoom_text = None  # Zoom 框内的文字
         # brush
         self._brushing = False
         self._brush_points = []
@@ -47,8 +48,8 @@ class MatplotCanvas(FigureCanvas):
         self._title_highlighted = False
 
         # 连接事件
-        self._cid_press   = self.mpl_connect('button_press_event', self._on_press)
-        self._cid_motion  = self.mpl_connect('motion_notify_event', self._on_motion)
+        self._cid_press = self.mpl_connect('button_press_event', self._on_press)
+        self._cid_motion = self.mpl_connect('motion_notify_event', self._on_motion)
         self._cid_release = self.mpl_connect('button_release_event', self._on_release)
         # 鼠标滚轮缩放数据区域
         self._cid_scroll = self.mpl_connect('scroll_event', self._on_scroll)
@@ -132,14 +133,18 @@ class MatplotCanvas(FigureCanvas):
         return False
 
     def _on_press(self, event):
-        print(f"Mouse press at ({event.x}, {event.y}) in canvas coords, "              f"data coords ({event.xdata}, {event.ydata}), "
+        print(f"Mouse press at ({event.x}, {event.y}) in canvas coords, "
+              f"data coords ({event.xdata}, {event.ydata}), "
               f"inaxes: {event.inaxes}")
         # 仅左键且在数据区域内
         if event.button != 1 or event.inaxes is None or event.inaxes is not self.main_ax:
             return
 
         if self._mode == 'zoom':
-            self._handle_zoom_press(event)
+            self.zoom_tool.on_press(event)
+        elif self._mode == 'crop':
+            self.crop_tool.on_press(event)
+            return  # crop 模式只处理拖动，不处理其他
         elif self._mode == 'pan':
             self._handle_pan_press(event)
         elif self._mode == 'add_point':
@@ -149,21 +154,6 @@ class MatplotCanvas(FigureCanvas):
         else:
             self._handle_default_press(event)
 
-    def _handle_zoom_press(self, event):
-        # zoom 模式：记录起点
-        self._zooming = True
-        self._zoom_start = (event.xdata, event.ydata)
-        # 创建虚线矩形
-        self._zoom_rect = Rectangle(
-            (event.xdata, event.ydata), 0, 0,
-            linewidth=1, edgecolor='red', facecolor='none',
-            linestyle='--'
-        )
-        self.main_ax.add_patch(self._zoom_rect)
-        # 创建文字对象
-        self._zoom_text = self.main_ax.text(event.xdata, event.ydata, "Zoom", color='red',
-                                        ha='center', va='center', fontsize=8, zorder=10, visible=True)
-        self.draw_idle()
 
     def _handle_pan_press(self, event):
         # pan 模式：启动平移
@@ -218,44 +208,18 @@ class MatplotCanvas(FigureCanvas):
         if self._brush_scatter is not None:
             self._brush_scatter.set_offsets(self._brush_points)
     
-    def is_reverse_yaxis(self) -> bool:
-        """判断当前坐标轴是否为反向 Y 轴（图像坐标系）。"""
-        ylim = self.main_ax.get_ylim()
-        return ylim[0] > ylim[1]
-    
-    def is_reverse_xaxis(self) -> bool:
-        """判断当前坐标轴是否为反向 X 轴。"""
-        xlim = self.main_ax.get_xlim()
-        return xlim[0] > xlim[1]
 
     def _on_motion(self, event):
         if self._mode == 'zoom':
-            self._handle_zoom_motion(event)
+            self.zoom_tool.on_motion(event)
+        elif self._mode == 'crop':
+            self.crop_tool.on_motion(event)
+            return  # crop 模式只处理拖动
         elif self._mode == 'pan':
             self._handle_pan_motion(event)
         elif self._mode == 'brush':
             self._handle_brush_motion(event)
 
-    def _handle_zoom_motion(self, event):
-        if self._zooming and self._zoom_start is not None:
-            if event.xdata is None or event.ydata is None:
-                return
-            x0, y0 = self._zoom_start
-            width  = event.xdata - x0
-            height = event.ydata - y0
-            self._zoom_rect.set_width(width)
-            self._zoom_rect.set_height(height)
-            # 更新文字到框中心
-            if width > 0:
-                self._zoom_text.set_text("Zoom In")
-            else:
-                self._zoom_text.set_text("Zoom Out")
-            if self._zoom_text is not None:
-                cx = x0 + width / 2
-                cy = y0 + height / 2
-                self._zoom_text.set_position((cx, cy))
-                self._zoom_text.set_visible(True)
-            self.draw_idle()
 
     def _handle_pan_motion(self, event):
         if self._panning and self._press_disp is not None:
@@ -301,54 +265,15 @@ class MatplotCanvas(FigureCanvas):
         if event.button != 1:
             return
         if self._mode == 'zoom':
-            self._handle_zoom_release(event)
+            self.zoom_tool.on_release(event)
+        elif self._mode == 'crop':
+            self.crop_tool.on_release(event)
+            return  # crop 模式只处理拖动
         elif self._mode == 'pan':
             self._handle_pan_release(event)
         elif self._mode == 'brush':
             self._handle_brush_release(event)
     
-    def __abs_fraction_on_axis(self, v0, v1, axis = "x") -> float:
-        """计算 v0 到 v1 在指定轴（x 或 y）上的绝对比例（0 到 1）。"""
-        if axis == "x":
-            ax_min, ax_max = self.main_ax.get_xlim()
-        else:
-            ax_min, ax_max = self.main_ax.get_ylim()
-        if ax_max == ax_min:
-            return 0.0
-        return abs(v1 - v0) / abs(ax_max - ax_min)
-
-    def _handle_zoom_release(self, event):
-        if not self._zooming:
-            return
-
-        self._zooming = False
-        if self._zoom_rect is not None:
-            self._zoom_rect.remove()
-            self._zoom_rect = None
-        if self._zoom_text is not None:
-            self._zoom_text.remove()
-            self._zoom_text = None
-        if self._zoom_start is not None \
-            and event.xdata is not None \
-            and event.ydata is not None:
-            x0, y0 = self._zoom_start
-            x1, y1 = event.xdata, event.ydata
-            if self.__abs_fraction_on_axis(x0, x1, "x") < 0.05 \
-                or self.__abs_fraction_on_axis(y0, y1, "y") < 0.05:
-                # 如果缩放区域太小，则认为是误操作，取消缩放
-                self._zoom_start = None
-                self.draw_idle()
-                return
-            # Zoom out 
-            # Zoom in 
-            if self.is_reverse_xaxis():
-                x0, x1 = max(x0, x1), min(x0, x1)
-            if self.is_reverse_yaxis():
-                y0, y1 = max(y0, y1), min(y0, y1)
-            self.main_ax.set_xlim(x0, x1)
-            self.main_ax.set_ylim(y0, y1)
-            self.draw_idle()
-        self._zoom_start = None
 
     def _handle_pan_release(self, event):
         if self._panning:
@@ -398,3 +323,9 @@ class MatplotCanvas(FigureCanvas):
             )
 
         self.draw_idle()
+
+    def _on_crop_completed(self, x0, y0, x1, y1):
+        """处理裁剪完成事件，由外部连接信号处理"""
+        # 此方法可由外部连接 crop_tool.crop_completed 信号来调用
+        # 默认实现：打印裁剪区域信息
+        print(f"Crop area selected: ({x0}, {y0}) to ({x1}, {y1})")

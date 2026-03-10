@@ -1,9 +1,10 @@
 import os
 
 import matplotlib.image as mpimg
+import numpy as np
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QLabel, QPushButton, QSplitter, QDockWidget, QToolBar, QFileDialog
+    QLabel, QPushButton, QSplitter, QDockWidget, QToolBar, QFileDialog, QMessageBox
 )
 from PySide6.QtCore import Qt
 
@@ -78,6 +79,9 @@ class DataExtractionWindow(QMainWindow):
         self.zoom_canvas = self.zoom_widget.zoom_canvas
 
         self.manual_extraction_widget = ManualExtractionWidget()
+        self.canvas.crop_tool.crop_completed.connect(self.on_crop_completed)
+        self._crop_mode = False
+        self._original_image = None  # 保存原始图像用于裁剪
         # self.manual_extraction_widget._build_content_widget()
 
         splitter = QSplitter()
@@ -128,19 +132,10 @@ class DataExtractionWindow(QMainWindow):
             return None
         node["path"].value = file_path  # Update the node's path property
         imge, width, height = self.load_image_from_path(file_path)
+        node.set_image(imge)  # Store the loaded image in the node
         node["image_width"].value = width
         node["image_height"].value = height
     
-    def load_image_from_path(self, file_path):
-        if not file_path:
-            return None
-        image = mpimg.imread(file_path)
-        height, width = image.shape[:2]
-        self.canvas.main_ax.clear()
-        self.canvas.main_ax.imshow(image)
-        self.canvas.draw_idle()
-        return image, width, height
-
     def _load_test_fig(self, fn):
         fig = self.canvas.figure
         fig.clear()
@@ -154,6 +149,81 @@ class DataExtractionWindow(QMainWindow):
         self.canvas.axes.imshow(image)
         fig.tight_layout(pad=0)
         self.canvas.draw_idle()
+
+    
+    def on_crop_completed(self, x0, y0, x1, y1):
+        """处理裁剪完成事件 - 由 crop_tool.crop_completed 信号触发"""
+        if self._original_image is None:
+            return
+        
+        # 获取当前显示的图像范围
+        ax = self.canvas.main_ax
+        xlim = ax.get_xlim()
+        ylim = ax.get_ylim()
+        
+        # 获取图像尺寸
+        img_height, img_width = self._original_image.shape[:2]
+        
+        # 计算数据坐标到图像像素坐标的映射
+        # 数据坐标 (xlim[0], xlim[1]) 对应图像 (0, img_width)
+        # 数据坐标 (ylim[0], ylim[1]) 对应图像 (img_height, 0) (因为图像 y 轴向下)
+        
+        # 计算裁剪区域在图像中的像素坐标
+        x_ratio = img_width / (xlim[1] - xlim[0]) if xlim[1] != xlim[0] else 0
+        y_ratio = img_height / (ylim[1] - ylim[0]) if ylim[1] != ylim[0] else 0
+        
+        # 处理反向坐标轴
+        if xlim[0] > xlim[1]:
+            x_ratio = -x_ratio
+        if ylim[0] > ylim[1]:
+            y_ratio = -y_ratio
+        
+        # 计算像素坐标（考虑图像坐标系 y 轴向下）
+        px0 = int(max(0, min(img_width, (x0 - xlim[0]) * x_ratio)))
+        px1 = int(max(0, min(img_width, (x1 - xlim[0]) * x_ratio)))
+        py0 = int(max(0, min(img_height, (y0 - ylim[0]) * y_ratio)))
+        py1 = int(max(0, min(img_height, (y1 - ylim[0]) * y_ratio)))
+        
+        # 确保坐标有序
+        x_start, x_end = min(px0, px1), max(px0, px1)
+        y_start, y_end = min(py0, py1), max(py0, py1)
+        
+        # 执行裁剪
+        cropped_image = self._original_image[y_start:y_end, x_start:x_end]
+        
+        # 显示裁剪后的图像
+        self._display_cropped_image(cropped_image)
+        
+        # 退出裁剪模式
+        self._crop_mode = False
+        self.canvas.set_mode(None)
+        self.canvas.crop_tool.set_active(False)
+        self.manual_extraction_widget.set_crop_mode(False)
+    
+    def _display_cropped_image(self, cropped_image):
+        """显示裁剪后的图像"""
+        if cropped_image.size == 0:
+            QMessageBox.warning(self, "警告", "裁剪区域为空")
+            return
+        
+        self.canvas.main_ax.clear()
+        self.canvas.main_ax.imshow(cropped_image)
+        self.canvas.draw_idle()
+        
+        # 更新原始图像引用
+        self._original_image = cropped_image
+    
+    def load_image_from_path(self, file_path):
+        """加载图像并保存原始图像用于后续裁剪"""
+        if not file_path:
+            return None
+        image = mpimg.imread(file_path)
+        height, width = image.shape[:2]
+        self._original_image = image  # 保存原始图像
+        self.canvas.main_ax.clear()
+        self.canvas.main_ax.imshow(image)
+        self.canvas.draw_idle()
+        return image, width, height
 
 
         

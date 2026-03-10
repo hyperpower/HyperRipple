@@ -74,6 +74,7 @@ class FigPanelToolbar(QToolBar):
         self._create_tool_action('pan', "asset/icons/hand.svg", "Pan", self._on_pan_clicked)
         self._create_tool_action('add_point', "asset/icons/add_point.svg", "Add Point", self._on_add_point_clicked)
         self._create_tool_action('brush', "asset/icons/brush.svg", "Brush", self._on_brush_clicked)
+        self._create_tool_action('crop', "asset/icons/crop.svg", "Crop", self._on_crop_clicked)
     
     def reset_other_actions(self, key):
         """重置其他按钮的状态。"""
@@ -127,4 +128,18 @@ class FigPanelToolbar(QToolBar):
         else:
             self.fig_panel.set_mode(None)
             self.canvas.set_mode(None)
+            self.canvas.unsetCursor()
+    
+    def _on_crop_clicked(self):
+        """裁剪工具点击事件。"""
+        if self.actions['crop'].isChecked():
+            self.reset_other_actions('crop')
+            self.fig_panel.set_mode('crop')
+            self.canvas.set_mode('crop')
+            self.canvas.crop_tool.set_active(True)
+            self.canvas.setCursor(Qt.CrossCursor)
+        else:
+            self.fig_panel.set_mode(None)
+            self.canvas.set_mode(None)
+            self.canvas.crop_tool.set_active(False)
             self.canvas.unsetCursor()

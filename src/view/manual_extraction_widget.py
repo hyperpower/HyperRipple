@@ -5,7 +5,8 @@ from view.dropdown_widget import DropDownWidget
 
 
 class ManualExtractionWidget(DropDownWidget):
-    """手动提取widget，包含增加、调整、删除按钮"""
+    """手动提取 widget，包含增加、调整、删除按钮"""
+    
     def __init__(self, parent=None):
         super().__init__("手动提取", parent)
         self.add_btn = None
@@ -37,6 +38,7 @@ class ManualExtractionWidget(DropDownWidget):
         buttons_layout.addWidget(delete_btn)
         
         content_layout.addLayout(buttons_layout)
+        
         content_layout.setContentsMargins(0, 0, 0, 0)
         content_layout.setSpacing(5)
         return content_widget

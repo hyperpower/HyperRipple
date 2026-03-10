@@ -19,7 +19,7 @@ from model.tree_model import TreeModel
 from model.table_model import TableModel
 # from view.main_window import MainWindow
 from view.de_window import DataExtractionWindow
-from data_extraction.deta_extraction_node import DataExtractionRootNode, DataExtractionNode
+from data_extraction.data_extraction_node import DataExtractionRootNode, DataExtractionNode
 
 
 def predefined_matplot_node():
