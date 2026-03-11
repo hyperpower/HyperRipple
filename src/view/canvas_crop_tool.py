@@ -1,17 +1,10 @@
 from PySide6.QtCore import Qt, Signal, QObject
 from PySide6.QtGui import QCursor
-from matplotlib.patches import Rectangle
-from matplotlib.lines import Line2D
+from matplotlib.patches import Rectangle, Circle
 
 
 class CanvasCropTool(QObject):
     """Canvas 裁剪工具类 - 可拖动的裁剪框
-    
-    功能：
-    1. 鼠标点击工具栏上 crop 进入 crop 模式
-    2. 在 canvas 插入的图片四周画一个框
-    3. 框的四条边可以用鼠标拖动以更改位置
-    4. 再次点击 crop 按钮退出 crop 模式
     """
     
     # 信号：裁剪完成，参数为裁剪区域的坐标 (x0, y0, x1, y1)
@@ -27,7 +20,9 @@ class CanvasCropTool(QObject):
         
         # 裁剪框状态
         self._active = False  # 是否处于 crop 模式
-        self._dragging_edge = None  # 当前拖动的边 ('left', 'right', 'top', 'bottom', 'inside')
+        self._dragging_edge = None  # 当前拖动的边或角
+        # 边：'left', 'right', 'top', 'bottom', 'inside'
+        # 角：'top-left', 'top-right', 'bottom-left', 'bottom-right'
         self._drag_start = None  # 拖动起点 (数据坐标)
         self._box_start = None  # 拖动开始时裁剪框的坐标
         
@@ -38,19 +33,114 @@ class CanvasCropTool(QObject):
         # 图形元素
         self._crop_rect = None  # 裁剪框矩形边框
         self._crop_rects = []  # 裁剪框外部遮罩矩形列表
-        self._handles = []  # 四个边的拖动手柄（Line2D 对象）
-        self._init_handles()
+        self._handles = []  # 8 个拖动手柄（4 个边 Rectangle + 4 个角 Circle）
     
-    def _init_handles(self):
-        """初始化拖动手柄"""
-        # 四个边的手柄：left, right, bottom, top
-        colors = ['#ff0000', '#ff0000', '#00ff00', '#00ff00']  # 红：左右，绿：上下
-        for i, color in enumerate(colors):
-            handle = Line2D([], [], color=color, linewidth=3, 
-                           marker='s', markersize=8, 
-                           markerfacecolor=color, markeredgecolor='white',
-                           pickradius=5, visible=False)
-            self._handles.append(handle)
+    def _create_handles(self):
+        """创建拖动手柄 - 根据裁剪框尺寸动态计算手柄大小
+        
+        返回 8 个手柄：
+        - 索引 0-3: 4 个边手柄（Rectangle）- 左、右、下、上
+        - 索引 4-7: 4 个角手柄（Circle）- 左上、右上、左下、右下
+        """
+        # 计算裁剪框的宽度和高度
+        box_width = abs(self._x1 - self._x0)
+        box_height = abs(self._y1 - self._y0)
+        
+        # 手柄长度为所在边长度的 0.2 倍
+        # 左右边手柄的高度（垂直方向）
+        left_right_handle_height = box_height * 0.2
+        # 上下边手柄的宽度（水平方向）
+        top_bottom_handle_width = box_width * 0.2
+        
+        # 手柄宽度/高度为长度的 0.1 倍（间隔）
+        handle_thickness = max(left_right_handle_height, top_bottom_handle_width) * 0.1
+        
+        # 角手柄半径 - 与边手柄厚度相同
+        corner_handle_radius = handle_thickness
+        
+        handles = []
+        
+        # === 4 个边手柄（Rectangle）===
+        edge_colors = ['#ff0000', '#ff0000', '#00ff00', '#00ff00']  # 红：左右，绿：上下
+        
+        # left handle - 垂直长条
+        handles.append(Rectangle(
+            (0, 0),
+            handle_thickness, left_right_handle_height,
+            linewidth=0,
+            facecolor=edge_colors[0],
+            zorder=6,
+            visible=True
+        ))
+        # right handle - 垂直长条
+        handles.append(Rectangle(
+            (0, 0),
+            handle_thickness, left_right_handle_height,
+            linewidth=0,
+            facecolor=edge_colors[1],
+            zorder=6,
+            visible=True
+        ))
+        # bottom handle - 水平长条
+        handles.append(Rectangle(
+            (0, 0),
+            top_bottom_handle_width, handle_thickness,
+            linewidth=0,
+            facecolor=edge_colors[2],
+            zorder=6,
+            visible=True
+        ))
+        # top handle - 水平长条
+        handles.append(Rectangle(
+            (0, 0),
+            top_bottom_handle_width, handle_thickness,
+            linewidth=0,
+            facecolor=edge_colors[3],
+            zorder=6,
+            visible=True
+        ))
+        
+        # === 4 个角手柄（Circle）===
+        corner_color = '#0000ff'  # 蓝色
+        
+        # top-left corner
+        handles.append(Circle(
+            (0, 0),  # 初始位置，后续会更新
+            corner_handle_radius,
+            linewidth=0,
+            facecolor=corner_color,
+            zorder=6,
+            visible=True
+        ))
+        # top-right corner
+        handles.append(Circle(
+            (0, 0),
+            corner_handle_radius,
+            linewidth=0,
+            facecolor=corner_color,
+            zorder=6,
+            visible=True
+        ))
+        # bottom-left corner
+        handles.append(Circle(
+            (0, 0),
+            corner_handle_radius,
+            linewidth=0,
+            facecolor=corner_color,
+            zorder=6,
+            visible=True
+        ))
+        # bottom-right corner
+        handles.append(Circle(
+            (0, 0),
+            corner_handle_radius,
+            linewidth=0,
+            facecolor=corner_color,
+            zorder=6,
+            visible=True
+        ))
+        
+        return handles
     
     def set_active(self, active: bool):
         """启用/禁用 crop 模式"""
@@ -120,11 +210,11 @@ class CanvasCropTool(QObject):
         )
         self.main_ax.add_patch(self._crop_rect)
         
-        # 添加四个边的手柄
+        # 创建并添加四个边的手柄
+        self._handles = self._create_handles()
         self._update_handles()
         for handle in self._handles:
-            handle.set_visible(True)
-            self.main_ax.add_artist(handle)
+            self.main_ax.add_patch(handle)
         
         self.canvas.draw_idle()
     
@@ -143,18 +233,54 @@ class CanvasCropTool(QObject):
             self._crop_rects.append(rect)
     
     def _update_handles(self):
-        """更新四个拖动手柄的位置"""
+        """更新 8 个拖动手柄的位置
+        
+        索引 0-3: 4 个边手柄（Rectangle）- 左、右、下、上
+        索引 4-7: 4 个角手柄（Circle）- 左上、右上、左下、右下
+        """
         cx = (self._x0 + self._x1) / 2
         cy = (self._y0 + self._y1) / 2
         
-        # left handle
-        self._handles[0].set_data([self._x0], [cy])
-        # right handle
-        self._handles[1].set_data([self._x1], [cy])
-        # bottom handle
-        self._handles[2].set_data([cx], [self._y0])
-        # top handle
-        self._handles[3].set_data([cx], [self._y1])
+        # === 更新 4 个边手柄（Rectangle）===
+        left_width = self._handles[0].get_width()
+        left_height = self._handles[0].get_height()
+        right_width = self._handles[1].get_width()
+        right_height = self._handles[1].get_height()
+        bottom_width = self._handles[2].get_width()
+        bottom_height = self._handles[2].get_height()
+        top_width = self._handles[3].get_width()
+        top_height = self._handles[3].get_height()
+        
+        # 手柄间隔 = 手柄长度 * 0.1
+        left_gap = left_height * 0.1
+        top_gap = top_height * 0.1
+        
+        # left handle - 在左边外侧，垂直居中
+        self._handles[0].set_x(self._x0 - left_width - left_gap)
+        self._handles[0].set_y(cy - left_height / 2)
+        
+        # right handle - 在右边外侧，垂直居中
+        self._handles[1].set_x(self._x1 + left_gap)
+        self._handles[1].set_y(cy - right_height / 2)
+        
+        # bottom handle - 在下边外侧，水平居中
+        self._handles[2].set_x(cx - bottom_width / 2)
+        self._handles[2].set_y(self._y0 - bottom_height - top_gap)
+        
+        # top handle - 在上边外侧，水平居中
+        self._handles[3].set_x(cx - top_width / 2)
+        self._handles[3].set_y(self._y1 + top_gap)
+        
+        # === 更新 4 个角手柄（Circle）===
+        # 角手柄中心直接在角点上
+        # top-left corner - 左上角
+        self._handles[4].center = (self._x0, self._y1)
+        # top-right corner - 右上角
+        self._handles[5].center = (self._x1, self._y1)
+        # bottom-left corner - 左下角
+        self._handles[6].center = (self._x0, self._y0)
+        # bottom-right corner - 右下角
+        self._handles[7].center = (self._x1, self._y0)
     
     def _remove_crop_box(self):
         """移除裁剪框和手柄"""
@@ -169,47 +295,85 @@ class CanvasCropTool(QObject):
         self._crop_rects = []
         
         for handle in self._handles:
-            if handle.axes is not None:
+            try:
                 handle.remove()
+            except Exception:
+                pass  # 如果已经移除则忽略
+        self._handles = []
         
         self.canvas.draw_idle()
     
     def _get_edge_at_position(self, x, y) -> str:
-        """检测给定位置最近的边或内部"""
+        """检测给定位置最近的边或角或内部（包括手柄区域）
+        
+        返回：
+        - 边：'left', 'right', 'top', 'bottom'
+        - 角：'top-left', 'top-right', 'bottom-left', 'bottom-right'
+        - 内部：'inside'
+        - 无：None
+        """
         if x is None or y is None:
             return None
         
-        # 计算到各边的距离
-        dist_left = abs(x - self._x0)
-        dist_right = abs(x - self._x1)
-        dist_bottom = abs(y - self._y0)
-        dist_top = abs(y - self._y1)
-        
-        # 获取坐标轴范围用于计算相对阈值
-        xlim = self.main_ax.get_xlim()
-        ylim = self.main_ax.get_ylim()
-        x_range = abs(xlim[1] - xlim[0])
-        y_range = abs(ylim[1] - ylim[0])
-        
-        # 动态阈值
-        x_threshold = x_range * self.EDGE_THRESHOLD
-        y_threshold = y_range * self.EDGE_THRESHOLD
-        
-        # 检查是否点击了某个边（手柄位置）
         cx = (self._x0 + self._x1) / 2
         cy = (self._y0 + self._y1) / 2
         
-        # 检查左右边的手柄
-        if abs(x - self._x0) < x_threshold and abs(y - cy) < y_threshold * 3:
-            return 'left'
-        if abs(x - self._x1) < x_threshold and abs(y - cy) < y_threshold * 3:
-            return 'right'
+        # 计算裁剪框尺寸
+        box_width = abs(self._x1 - self._x0)
+        box_height = abs(self._y1 - self._y0)
         
-        # 检查上下边的手柄
-        if abs(y - self._y0) < y_threshold and abs(x - cx) < x_threshold * 3:
+        # 边手柄尺寸
+        left_right_handle_height = box_height * 0.2
+        top_bottom_handle_width = box_width * 0.2
+        handle_thickness = max(left_right_handle_height, top_bottom_handle_width) * 0.1
+        handle_gap = max(left_right_handle_height, top_bottom_handle_width) * 0.1
+        
+        # 角手柄半径和间隔
+        corner_radius = handle_thickness * 1.5  # 角手柄检测半径稍大一些
+        
+        # === 检查 4 个边手柄 ===
+        # left handle
+        left_x = self._x0 - handle_thickness - handle_gap
+        left_y = cy - left_right_handle_height / 2
+        if (left_x <= x <= left_x + handle_thickness and 
+            left_y <= y <= left_y + left_right_handle_height):
+            return 'left'
+        # right handle
+        right_x = self._x1 + handle_gap
+        right_y = cy - left_right_handle_height / 2
+        if (right_x <= x <= right_x + handle_thickness and 
+            right_y <= y <= right_y + left_right_handle_height):
+            return 'right'
+        # bottom handle
+        bottom_x = cx - top_bottom_handle_width / 2
+        bottom_y = self._y0 - handle_thickness - handle_gap
+        if (bottom_x <= x <= bottom_x + top_bottom_handle_width and 
+            bottom_y <= y <= bottom_y + handle_thickness):
             return 'bottom'
-        if abs(y - self._y1) < y_threshold and abs(x - cx) < x_threshold * 3:
+        # top handle
+        top_x = cx - top_bottom_handle_width / 2
+        top_y = self._y1 + handle_gap
+        if (top_x <= x <= top_x + top_bottom_handle_width and 
+            top_y <= y <= top_y + handle_thickness):
             return 'top'
+        
+        # === 检查 4 个角手柄（圆形区域）===
+        import math
+        # 角手柄检测半径
+        detect_radius = corner_radius
+        
+        # top-left - 中心在角点上
+        if math.sqrt((x - self._x0)**2 + (y - self._y1)**2) <= detect_radius:
+            return 'top-left'
+        # top-right
+        if math.sqrt((x - self._x1)**2 + (y - self._y1)**2) <= detect_radius:
+            return 'top-right'
+        # bottom-left
+        if math.sqrt((x - self._x0)**2 + (y - self._y0)**2) <= detect_radius:
+            return 'bottom-left'
+        # bottom-right
+        if math.sqrt((x - self._x1)**2 + (y - self._y0)**2) <= detect_radius:
+            return 'bottom-right'
         
         # 检查是否在框内（用于整体移动）
         x_inside = min(self._x0, self._x1) <= x <= max(self._x0, self._x1)
@@ -244,6 +408,10 @@ class CanvasCropTool(QObject):
                 self.canvas.setCursor(Qt.SizeVerCursor)
             elif edge == 'inside':
                 self.canvas.setCursor(Qt.SizeAllCursor)
+            elif edge in ['top-left', 'bottom-right']:
+                self.canvas.setCursor(Qt.SizeBDiagCursor)  # 反对角线（↗↙）
+            elif edge in ['top-right', 'bottom-left']:
+                self.canvas.setCursor(Qt.SizeFDiagCursor)  # 正对角线（↖↘）
     
     def on_motion(self, event):
         """处理鼠标移动事件"""
@@ -260,6 +428,10 @@ class CanvasCropTool(QObject):
                     self.canvas.setCursor(Qt.SizeVerCursor)
                 elif edge == 'inside':
                     self.canvas.setCursor(Qt.SizeAllCursor)
+                elif edge in ['top-left', 'bottom-right']:
+                    self.canvas.setCursor(Qt.SizeBDiagCursor)  # 反对角线（↗↙）
+                elif edge in ['top-right', 'bottom-left']:
+                    self.canvas.setCursor(Qt.SizeFDiagCursor)  # 正对角线（↖↘）
                 else:
                     self.canvas.setCursor(Qt.ArrowCursor)
         
@@ -289,6 +461,22 @@ class CanvasCropTool(QObject):
             self._x1 = x1 + dx
             self._y0 = y0 + dy
             self._y1 = y1 + dy
+        elif self._dragging_edge == 'top-left':
+            # 左上角：同时改变 x0 和 y1
+            self._x0 = min(x0 + dx, self._x1 - 0.01)
+            self._y1 = max(y1 + dy, self._y0 + 0.01)
+        elif self._dragging_edge == 'top-right':
+            # 右上角：同时改变 x1 和 y1
+            self._x1 = max(x1 + dx, self._x0 + 0.01)
+            self._y1 = max(y1 + dy, self._y0 + 0.01)
+        elif self._dragging_edge == 'bottom-left':
+            # 左下角：同时改变 x0 和 y0
+            self._x0 = min(x0 + dx, self._x1 - 0.01)
+            self._y0 = min(y0 + dy, self._y1 - 0.01)
+        elif self._dragging_edge == 'bottom-right':
+            # 右下角：同时改变 x1 和 y0
+            self._x1 = max(x1 + dx, self._x0 + 0.01)
+            self._y0 = min(y0 + dy, self._y1 - 0.01)
         
         self._update_crop_box()
     
