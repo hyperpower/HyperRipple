@@ -138,8 +138,22 @@ class FigPanelToolbar(QToolBar):
             self.canvas.set_mode('crop')
             self.canvas.crop_tool.set_active(True)
             self.canvas.setCursor(Qt.CrossCursor)
+            # 通知 DataExtractionWindow 显示 CropToolWidget
+            self._set_de_crop_mode(True)
         else:
             self.fig_panel.set_mode(None)
             self.canvas.set_mode(None)
             self.canvas.crop_tool.set_active(False)
             self.canvas.unsetCursor()
+            # 通知 DataExtractionWindow 隐藏 CropToolWidget
+            self._set_de_crop_mode(False)
+    
+    def _set_de_crop_mode(self, active: bool):
+        """通知 DataExtractionWindow 设置 crop 模式"""
+        # 尝试找到父窗口 DataExtractionWindow
+        parent = self.parent()
+        while parent is not None:
+            if hasattr(parent, 'set_crop_mode'):
+                parent.set_crop_mode(active)
+                return
+            parent = parent.parent()

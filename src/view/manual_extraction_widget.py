@@ -1,5 +1,5 @@
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QSizePolicy
-from PySide6.QtCore import QSize
+from PySide6.QtCore import QSize, Signal
 
 from view.dropdown_widget import DropDownWidget
 
@@ -7,11 +7,15 @@ from view.dropdown_widget import DropDownWidget
 class ManualExtractionWidget(DropDownWidget):
     """手动提取 widget，包含增加、调整、删除按钮"""
     
+    # 信号：crop 模式切换请求
+    crop_mode_requested = Signal(bool)
+    
     def __init__(self, parent=None):
         super().__init__("手动提取", parent)
         self.add_btn = None
         self.adjust_btn = None
         self.delete_btn = None
+        self._crop_mode = False
         self.setContentBuilder(self._build_content_widget)
         self.setMinimumWidth(220)
         
@@ -42,3 +46,7 @@ class ManualExtractionWidget(DropDownWidget):
         content_layout.setContentsMargins(0, 0, 0, 0)
         content_layout.setSpacing(5)
         return content_widget
+    
+    def set_crop_mode(self, active: bool):
+        """设置 crop 模式状态"""
+        self._crop_mode = active

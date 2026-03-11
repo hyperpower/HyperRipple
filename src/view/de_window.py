@@ -17,6 +17,7 @@ from view.fig_panel import FigPanel
 from view.matplot_canvas import MatplotCanvas
 from view.zoom_widget import ZoomWidget
 from view.manual_extraction_widget import ManualExtractionWidget
+from view.crop_tool_widget import CropToolWidget
 
 
 class DataExtractionWindow(QMainWindow):
@@ -79,7 +80,10 @@ class DataExtractionWindow(QMainWindow):
         self.zoom_canvas = self.zoom_widget.zoom_canvas
 
         self.manual_extraction_widget = ManualExtractionWidget()
+        # CropToolWidget - 只在 crop 模式激活时添加到 right_dock
+        self.crop_tool_widget = CropToolWidget(self.canvas)
         self.canvas.crop_tool.crop_completed.connect(self.on_crop_completed)
+        self.canvas.crop_tool.cropbox_changed.connect(self._on_cropbox_changed)
         self._crop_mode = False
         self._original_image = None  # 保存原始图像用于裁剪
         # self.manual_extraction_widget._build_content_widget()
@@ -104,6 +108,8 @@ class DataExtractionWindow(QMainWindow):
         right_layout.setSpacing(0)
         right_layout.addWidget(self.zoom_widget)
         right_layout.addWidget(self.manual_extraction_widget)
+        # CropToolWidget 初始不添加，只有在 crop 模式激活时才添加
+        self._crop_tool_widget_added = False
         right_layout.addStretch(1)
         self.right_dock.setWidget(right_container)
         self.right_dock.setFeatures(QDockWidget.NoDockWidgetFeatures)
@@ -195,7 +201,7 @@ class DataExtractionWindow(QMainWindow):
         self._display_cropped_image(cropped_image)
         
         # 退出裁剪模式
-        self._crop_mode = False
+        self.set_crop_mode(False)
         self.canvas.set_mode(None)
         self.canvas.crop_tool.set_active(False)
         self.manual_extraction_widget.set_crop_mode(False)
@@ -212,6 +218,51 @@ class DataExtractionWindow(QMainWindow):
         
         # 更新原始图像引用
         self._original_image = cropped_image
+    
+    def set_crop_mode(self, active: bool):
+        """设置裁剪模式 - 控制 CropToolWidget 的显示"""
+        self._crop_mode = active
+        
+        right_container = self.right_dock.widget()
+        right_layout = right_container.layout()
+        
+        if active:
+            # 激活 crop 模式，添加 CropToolWidget
+            if not self._crop_tool_widget_added:
+                # 在 manual_extraction_widget 之后，stretch 之前添加
+                right_layout.insertWidget(right_layout.count() - 1, self.crop_tool_widget)
+                self._crop_tool_widget_added = True
+            self.crop_tool_widget.setCollapsed(False)
+            # 设置 canvas 的 crop 模式
+            self.canvas.set_mode('crop')
+            self.canvas.crop_tool.set_active(True)
+        else:
+            # 退出 crop 模式，移除 CropToolWidget
+            if self._crop_tool_widget_added:
+                right_layout.removeWidget(self.crop_tool_widget)
+                self.crop_tool_widget.setParent(None)
+                self._crop_tool_widget_added = False
+            # 清除 canvas 的 crop 模式
+            self.canvas.set_mode(None)
+            self.canvas.crop_tool.set_active(False)
+            
+            # 取消工具栏 crop 按钮的选中状态
+            self._unset_toolbar_crop_button()
+    
+    def _unset_toolbar_crop_button(self):
+        """取消工具栏 crop 按钮的选中状态"""
+        if hasattr(self.fig_panel, 'toolbar') and hasattr(self.fig_panel.toolbar, 'actions'):
+            if 'crop' in self.fig_panel.toolbar.actions:
+                self.fig_panel.toolbar.actions['crop'].setChecked(False)
+    
+    def _on_cropbox_changed(self, x0, y0, x1, y1):
+        """当 cropbox 变化时，确保 CropToolWidget 被添加"""
+        if self._crop_mode and not self._crop_tool_widget_added:
+            right_container = self.right_dock.widget()
+            right_layout = right_container.layout()
+            right_layout.insertWidget(right_layout.count() - 1, self.crop_tool_widget)
+            self._crop_tool_widget_added = True
+            self.crop_tool_widget.setCollapsed(False)
     
     def load_image_from_path(self, file_path):
         """加载图像并保存原始图像用于后续裁剪"""

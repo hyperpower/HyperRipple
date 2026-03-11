@@ -1,3 +1,4 @@
+import numpy as np
 from PySide6.QtCore import Qt, Signal, QObject
 from PySide6.QtGui import QCursor
 from matplotlib.patches import Rectangle, Circle
@@ -9,6 +10,9 @@ class CanvasCropTool(QObject):
     
     # 信号：裁剪完成，参数为裁剪区域的坐标 (x0, y0, x1, y1)
     crop_completed = Signal(float, float, float, float)
+    
+    # 信号：裁剪框变化，参数为裁剪区域的坐标 (x0, y0, x1, y1)
+    cropbox_changed = Signal(float, float, float, float)
     
     # 拖动边的阈值（数据坐标单位）
     EDGE_THRESHOLD = 0.02
@@ -358,21 +362,20 @@ class CanvasCropTool(QObject):
             return 'top'
         
         # === 检查 4 个角手柄（圆形区域）===
-        import math
         # 角手柄检测半径
         detect_radius = corner_radius
         
         # top-left - 中心在角点上
-        if math.sqrt((x - self._x0)**2 + (y - self._y1)**2) <= detect_radius:
+        if np.hypot(x - self._x0, y - self._y1) <= detect_radius:
             return 'top-left'
         # top-right
-        if math.sqrt((x - self._x1)**2 + (y - self._y1)**2) <= detect_radius:
+        if np.hypot(x - self._x1, y - self._y1) <= detect_radius:
             return 'top-right'
         # bottom-left
-        if math.sqrt((x - self._x0)**2 + (y - self._y0)**2) <= detect_radius:
+        if np.hypot(x - self._x0, y - self._y0) <= detect_radius:
             return 'bottom-left'
         # bottom-right
-        if math.sqrt((x - self._x1)**2 + (y - self._y0)**2) <= detect_radius:
+        if np.hypot(x - self._x1, y - self._y0) <= detect_radius:
             return 'bottom-right'
         
         # 检查是否在框内（用于整体移动）
@@ -484,6 +487,8 @@ class CanvasCropTool(QObject):
         """更新裁剪框显示"""
         # 重新绘制整个裁剪框（包括外部遮罩）
         self._draw_crop_box()
+        # 发射 cropbox 变化信号
+        self.cropbox_changed.emit(*self.get_crop_bounds())
     
     def on_release(self, event):
         """处理鼠标释放事件"""
