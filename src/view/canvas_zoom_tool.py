@@ -12,6 +12,11 @@ class CanvasZoomTool:
         self._zoom_start = None
         self._zoom_rect = None
         self._zoom_text = None
+        self._zoom_callback = None  # 缩放完成后的回调函数
+    
+    def set_zoom_callback(self, callback):
+        """设置缩放完成后的回调函数"""
+        self._zoom_callback = callback
     
     def on_press(self, event):
         """处理鼠标按下事件 - 对应原 _handle_zoom_press"""
@@ -87,6 +92,10 @@ class CanvasZoomTool:
             self.main_ax.set_ylim(y0, y1)
             self.canvas.draw_idle()
         self._zoom_start = None
+        
+        # 调用回调函数（用于重置工具栏按钮状态）
+        if self._zoom_callback is not None:
+            self._zoom_callback()
     
     def _abs_fraction_on_axis(self, v0, v1, axis="x") -> float:
         """计算 v0 到 v1 在指定轴（x 或 y）上的绝对比例（0 到 1）。"""

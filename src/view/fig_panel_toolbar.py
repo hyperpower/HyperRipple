@@ -70,11 +70,17 @@ class FigPanelToolbar(QToolBar):
     
     def _init_actions(self):
         """初始化所有工具栏按钮。"""
+        # 添加 home 按钮（放在第一位）
+        self._create_tool_action('home', "asset/icons/home.svg", "Home", self._on_home_clicked)
+        # 添加其他按钮
         self._create_tool_action('zoom', "asset/icons/zoom.svg", "Zoom", self._on_zoom_clicked)
         self._create_tool_action('pan', "asset/icons/hand.svg", "Pan", self._on_pan_clicked)
         self._create_tool_action('add_point', "asset/icons/add_point.svg", "Add Point", self._on_add_point_clicked)
         self._create_tool_action('brush', "asset/icons/brush.svg", "Brush", self._on_brush_clicked)
         self._create_tool_action('crop', "asset/icons/crop.svg", "Crop", self._on_crop_clicked)
+        
+        # 设置缩放完成后的回调，用于重置缩放按钮状态
+        self.canvas.zoom_tool.set_zoom_callback(self._on_zoom_completed)
     
     def reset_other_actions(self, key):
         """重置其他按钮的状态。"""
@@ -93,6 +99,13 @@ class FigPanelToolbar(QToolBar):
             self.fig_panel.set_mode(None)
             self.canvas.set_mode(None)
             self.canvas.unsetCursor()
+    
+    def _on_zoom_completed(self):
+        """缩放操作完成后的回调，重置缩放按钮状态。"""
+        self.actions['zoom'].setChecked(False)
+        self.fig_panel.set_mode(None)
+        self.canvas.set_mode(None)
+        self.canvas.unsetCursor()
     
     def _on_pan_clicked(self):
         """平移工具点击事件。"""
@@ -147,6 +160,15 @@ class FigPanelToolbar(QToolBar):
             self.canvas.unsetCursor()
             # 通知 DataExtractionWindow 隐藏 CropToolWidget
             self._set_de_crop_mode(False)
+    
+    def _on_home_clicked(self):
+        """Home 按钮点击事件，恢复初始视图状态。"""
+        # 恢复初始视图
+        self.canvas.reset_view()
+        # 重置其他按钮状态
+        self.reset_other_actions('home')
+        # home 按钮执行后自动切换回未点击状态
+        self.actions['home'].setChecked(False)
     
     def _set_de_crop_mode(self, active: bool):
         """通知 DataExtractionWindow 设置 crop 模式"""

@@ -46,6 +46,11 @@ class MatplotCanvas(FigureCanvas):
 
         # 标题高亮状态
         self._title_highlighted = False
+        
+        # 初始视图状态（用于 home 按钮恢复）
+        self._initial_xlim = None
+        self._initial_ylim = None
+        self._has_initial_view = False
 
         # 连接事件
         self._cid_press = self.mpl_connect('button_press_event', self._on_press)
@@ -60,6 +65,42 @@ class MatplotCanvas(FigureCanvas):
     def set_mode(self, mode: str | None):
         """设置当前交互模式：'pan' 或 None。"""
         self._mode = mode
+    
+    def set_initial_view(self, xlim=None, ylim=None):
+        """
+        设置初始视图范围。
+        如果没有提供参数，则使用当前视图范围作为初始视图。
+        如果没有数据（xlim/ylim为None），使用默认范围（0-100）。
+        """
+        if xlim is None:
+            xlim = self.main_ax.get_xlim()
+        if ylim is None:
+            ylim = self.main_ax.get_ylim()
+        
+        # 检查是否是默认范围（没有数据时）
+        if xlim[0] == 0.0 and xlim[1] == 1.0 and ylim[0] == 0.0 and ylim[1] == 1.0:
+            # 使用默认范围 0-100
+            self._initial_xlim = (0, 100)
+            self._initial_ylim = (0, 100)
+        else:
+            self._initial_xlim = xlim
+            self._initial_ylim = ylim
+        
+        self._has_initial_view = True
+    
+    def reset_view(self):
+        """
+        重置视图到初始状态。
+        如果没有设置初始视图，使用默认范围（0-100）。
+        """
+        if self._has_initial_view and self._initial_xlim is not None and self._initial_ylim is not None:
+            self.main_ax.set_xlim(self._initial_xlim)
+            self.main_ax.set_ylim(self._initial_ylim)
+        else:
+            # 使用默认范围 0-100
+            self.main_ax.set_xlim(0, 100)
+            self.main_ax.set_ylim(0, 100)
+        self.draw_idle()
     
     def _render_figure_from_node(self, node):
         """根据 FigureNode 的属性渲染图形内容。"""
@@ -78,10 +119,23 @@ class MatplotCanvas(FigureCanvas):
                 y_data = data_node["y"].value
                 self.main_ax.plot(x_data, y_data, label=data_node["label"].value)
 
+        # 设置初始视图范围（在绘制数据后）
+        self._update_initial_view()
+        
         # self.main_ax.set_xlim(node["Axes"]["xlim_min"].value, node["Axes"]["xlim_max"].value)
         # self.main_ax.set_ylim(node["Axes"]["ylim_min"].value, node["Axes"]["ylim_max"].value)
         # Get data from DataNode children
         self.main_ax.grid(True)
+    
+    def _update_initial_view(self):
+        """
+        更新初始视图范围。
+        如果还没有设置初始视图，则根据当前数据设置。
+        """
+        if not self._has_initial_view:
+            xlim = self.main_ax.get_xlim()
+            ylim = self.main_ax.get_ylim()
+            self.set_initial_view(xlim, ylim)
 
 
     def highlight_title_if_clicked(self, event) -> bool:

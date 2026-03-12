@@ -84,6 +84,10 @@ class DataExtractionWindow(QMainWindow):
         self.crop_tool_widget = CropToolWidget(self.canvas)
         self.canvas.crop_tool.crop_completed.connect(self.on_crop_completed)
         self.canvas.crop_tool.cropbox_changed.connect(self._on_cropbox_changed)
+        
+        # 连接 CropToolWidget 的信号
+        self.crop_tool_widget.crop_cancelled.connect(self._on_crop_cancelled)
+        self.crop_tool_widget.crop_applied.connect(self._on_crop_applied)
         self._crop_mode = False
         self._original_image = None  # 保存原始图像用于裁剪
         # self.manual_extraction_widget._build_content_widget()
@@ -238,6 +242,8 @@ class DataExtractionWindow(QMainWindow):
             self.canvas.crop_tool.set_active(True)
         else:
             # 退出 crop 模式，移除 CropToolWidget
+            print("Exiting crop mode, removing CropToolWidget if added")
+            print("active:", active, "crop_tool_widget_added:", self._crop_tool_widget_added)
             if self._crop_tool_widget_added:
                 right_layout.removeWidget(self.crop_tool_widget)
                 self.crop_tool_widget.setParent(None)
@@ -264,6 +270,14 @@ class DataExtractionWindow(QMainWindow):
             self._crop_tool_widget_added = True
             self.crop_tool_widget.setCollapsed(False)
     
+    def _on_crop_cancelled(self):
+        """处理 CropToolWidget 取消裁剪信号"""
+        self.set_crop_mode(False)
+    
+    def _on_crop_applied(self):
+        """处理 CropToolWidget 应用裁剪信号"""
+        self.set_crop_mode(False)
+    
     def load_image_from_path(self, file_path):
         """加载图像并保存原始图像用于后续裁剪"""
         if not file_path:
@@ -273,6 +287,8 @@ class DataExtractionWindow(QMainWindow):
         self._original_image = image  # 保存原始图像
         self.canvas.main_ax.clear()
         self.canvas.main_ax.imshow(image)
+        # 设置初始视图范围（在显示图片后）
+        self.canvas.set_initial_view()
         self.canvas.draw_idle()
         return image, width, height
 

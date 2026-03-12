@@ -20,6 +20,7 @@ from model.table_model import TableModel
 # from view.main_window import MainWindow
 from view.de_window import DataExtractionWindow
 from data_extraction.data_extraction_node import DataExtractionRootNode, DataExtractionNode
+from data_extraction.data_extraction_manager import DataExtractionManager
 
 
 def predefined_matplot_node():
@@ -27,18 +28,15 @@ def predefined_matplot_node():
     return node
 
 
-
 if __name__ == "__main__":
     print("Current working directory:", 
           os.getcwd())
     app = QApplication(sys.argv)
-    # app.setStyle("Fusion")
-
+    manager = DataExtractionManager(app)
     
-    # window = TreePropertyWindow(MatplotModel())
-    mnode = predefined_matplot_node() 
-    window = DataExtractionWindow(mnode)
-    window.show()
-    window.load_image_from_path("asset/test/coordinate_example.png")
-    # window.main_node.new_figure("Figure 1")
+    manager.main_node = predefined_matplot_node() 
+    manager.main_window = DataExtractionWindow(manager.main_node)
+    manager.main_window.show()
+    manager.main_window.load_image_from_path("asset/test/coordinate_example.png")
+    # manager.main_window.main_node.new_figure("Figure 1")
     sys.exit(app.exec())
