@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, Signal, QSize
 
 from view.dropdown_widget import DropDownWidget
-from view.canvas_crop_tool import CanvasCropTool
+from view.canvas_tool.canvas_crop_tool import CanvasCropTool
 
 
 class CropToolWidget(DropDownWidget):

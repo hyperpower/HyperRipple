@@ -36,7 +36,9 @@ if __name__ == "__main__":
     
     manager.main_node = predefined_matplot_node() 
     manager.main_window = DataExtractionWindow(manager.main_node)
+
+    manager.main_node.children[1].load_image_from_path("asset/test/coordinate_example.png")
+    manager.main_window.draw_image_on_canvas(manager.main_node.children[1])
     manager.main_window.show()
-    manager.main_window.load_image_from_path("asset/test/coordinate_example.png")
     # manager.main_window.main_node.new_figure("Figure 1")
     sys.exit(app.exec())

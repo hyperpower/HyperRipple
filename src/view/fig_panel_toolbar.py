@@ -4,7 +4,6 @@ from PySide6.QtGui import QAction, QIcon
 
 from view.view_helper import createThemedPixmap, createEmptyIcon
 
-
 class FigPanelToolbar(QToolBar):
     """Figure 面板的工具栏类，继承自 QToolBar。"""
     
@@ -13,7 +12,7 @@ class FigPanelToolbar(QToolBar):
         self.canvas = canvas
         self.fig_panel = fig_panel
         self._current_node = None
-        self.actions = {}
+        self._actions = {}
         self._dynamic_actions = []  # 动态添加的按钮
         
         self.setMovable(False)
@@ -33,7 +32,7 @@ class FigPanelToolbar(QToolBar):
         action.setCheckable(True)
         action.triggered.connect(callback)
         self.addAction(action)
-        self.actions[key] = action
+        self._actions[key] = action
     
     def _create_dynamic_action(self, icon_path: str, action_name: str, handler):
         """创建动态工具栏按钮。"""
@@ -77,20 +76,27 @@ class FigPanelToolbar(QToolBar):
         self._create_tool_action('pan', "asset/icons/hand.svg", "Pan", self._on_pan_clicked)
         self._create_tool_action('add_point', "asset/icons/add_point.svg", "Add Point", self._on_add_point_clicked)
         self._create_tool_action('brush', "asset/icons/brush.svg", "Brush", self._on_brush_clicked)
-        self._create_tool_action('crop', "asset/icons/crop.svg", "Crop", self._on_crop_clicked)
-        
-        # 设置缩放完成后的回调，用于重置缩放按钮状态
+        # 移除 crop 静态按钮
         self.canvas.zoom_tool.set_zoom_callback(self._on_zoom_completed)
     
     def reset_other_actions(self, key):
-        """重置其他按钮的状态。"""
-        for k, action in self.actions.items():
+        """重置其他按钮的状态，并自动取消 Crop 模式。"""
+        for k, action in self._actions.items():
             if k != key:
-                action.setChecked(False)
+                # 如果是 crop 按钮且被激活，取消 crop 模式
+                if k == 'crop' and action.isChecked():
+                    action.setChecked(False)
+                    self.fig_panel.set_mode(None)
+                    self.canvas.set_mode(None)
+                    self.canvas.crop_tool.set_active(False)
+                    self.canvas.unsetCursor()
+                    self._set_de_crop_mode(False)
+                else:
+                    action.setChecked(False)
     
     def _on_zoom_clicked(self):
         """缩放工具点击事件。"""
-        if self.actions['zoom'].isChecked():
+        if self._actions['zoom'].isChecked():
             self.reset_other_actions('zoom')
             self.fig_panel.set_mode('zoom')
             self.canvas.set_mode('zoom')
@@ -102,14 +108,14 @@ class FigPanelToolbar(QToolBar):
     
     def _on_zoom_completed(self):
         """缩放操作完成后的回调，重置缩放按钮状态。"""
-        self.actions['zoom'].setChecked(False)
+        self._actions['zoom'].setChecked(False)
         self.fig_panel.set_mode(None)
         self.canvas.set_mode(None)
         self.canvas.unsetCursor()
     
     def _on_pan_clicked(self):
         """平移工具点击事件。"""
-        if self.actions['pan'].isChecked():
+        if self._actions['pan'].isChecked():
             self.reset_other_actions('pan')
             self.fig_panel.set_mode('pan')
             self.canvas.set_mode('pan')
@@ -121,7 +127,7 @@ class FigPanelToolbar(QToolBar):
     
     def _on_add_point_clicked(self):
         """添加点工具点击事件。"""
-        if self.actions['add_point'].isChecked():
+        if self._actions['add_point'].isChecked():
             self.reset_other_actions('add_point')
             self.fig_panel.set_mode('add_point')
             self.canvas.set_mode('add_point')
@@ -133,7 +139,7 @@ class FigPanelToolbar(QToolBar):
     
     def _on_brush_clicked(self):
         """笔刷工具点击事件。"""
-        if self.actions['brush'].isChecked():
+        if self._actions['brush'].isChecked():
             self.reset_other_actions('brush')
             self.fig_panel.set_mode('brush')
             self.canvas.set_mode('brush')
@@ -143,36 +149,36 @@ class FigPanelToolbar(QToolBar):
             self.canvas.set_mode(None)
             self.canvas.unsetCursor()
     
+    def _on_home_clicked(self):
+        """Home 按钮点击事件，恢复初始视图状态。"""
+        self.canvas.reset_view()
+        self.reset_other_actions('home')
+        self._actions['home'].setChecked(False)
+    
     def _on_crop_clicked(self):
         """裁剪工具点击事件。"""
-        if self.actions['crop'].isChecked():
+        print("Crop button clicked on toolbar, checking state...")  # Debug log
+        # 查找动态 crop 按钮
+        crop_action = None
+        for action in self._dynamic_actions:
+            if action.text() == "Crop Image":
+                crop_action = action
+                break
+        if crop_action and crop_action.isChecked():
             self.reset_other_actions('crop')
             self.fig_panel.set_mode('crop')
             self.canvas.set_mode('crop')
             self.canvas.crop_tool.set_active(True)
             self.canvas.setCursor(Qt.CrossCursor)
-            # 通知 DataExtractionWindow 显示 CropToolWidget
             self._set_de_crop_mode(True)
         else:
             self.fig_panel.set_mode(None)
             self.canvas.set_mode(None)
             self.canvas.crop_tool.set_active(False)
             self.canvas.unsetCursor()
-            # 通知 DataExtractionWindow 隐藏 CropToolWidget
             self._set_de_crop_mode(False)
-    
-    def _on_home_clicked(self):
-        """Home 按钮点击事件，恢复初始视图状态。"""
-        # 恢复初始视图
-        self.canvas.reset_view()
-        # 重置其他按钮状态
-        self.reset_other_actions('home')
-        # home 按钮执行后自动切换回未点击状态
-        self.actions['home'].setChecked(False)
-    
+
     def _set_de_crop_mode(self, active: bool):
-        """通知 DataExtractionWindow 设置 crop 模式"""
-        # 尝试找到父窗口 DataExtractionWindow
         parent = self.parent()
         while parent is not None:
             if hasattr(parent, 'set_crop_mode'):
